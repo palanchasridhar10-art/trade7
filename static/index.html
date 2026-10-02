@@ -609,29 +609,121 @@
     <!-- Actions Bar -->
     <div class="actions-panel">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <label for="symbolSelect" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Candidate Stock:</label>
+        <label for="symbolSelect" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Manual Analysis:</label>
         <select id="symbolSelect" class="watchlist-select">
-          <option value="RELIANCE">RELIANCE (NSE - Energy)</option>
-          <option value="TCS">TCS (NSE - IT)</option>
-          <option value="INFY">INFY (NSE - IT Event Risk)</option>
-          <option value="HDFCBANK">HDFCBANK (NSE - Banking)</option>
-          <option value="ICICIBANK">ICICIBANK (NSE - Banking)</option>
-          <option value="SBIN">SBIN (NSE - PSU Banking)</option>
+          <optgroup label="Energy">
+            <option value="RELIANCE">RELIANCE</option>
+            <option value="ONGC">ONGC</option>
+            <option value="BPCL">BPCL</option>
+            <option value="COALINDIA">COALINDIA</option>
+            <option value="NTPC">NTPC</option>
+            <option value="POWERGRID">POWERGRID</option>
+          </optgroup>
+          <optgroup label="Banking">
+            <option value="HDFCBANK">HDFCBANK</option>
+            <option value="ICICIBANK">ICICIBANK</option>
+            <option value="SBIN">SBIN</option>
+            <option value="AXISBANK">AXISBANK</option>
+            <option value="KOTAKBANK">KOTAKBANK</option>
+            <option value="INDUSINDBK">INDUSINDBK</option>
+            <option value="BAJFINANCE">BAJFINANCE</option>
+            <option value="BAJAJFINSV">BAJAJFINSV</option>
+          </optgroup>
+          <optgroup label="IT">
+            <option value="TCS">TCS</option>
+            <option value="INFY">INFY</option>
+            <option value="WIPRO">WIPRO</option>
+            <option value="HCLTECH">HCLTECH</option>
+            <option value="TECHM">TECHM</option>
+            <option value="LTI">LTI</option>
+          </optgroup>
+          <optgroup label="FMCG">
+            <option value="HINDUNILVR">HINDUNILVR</option>
+            <option value="ITC">ITC</option>
+            <option value="NESTLEIND">NESTLEIND</option>
+            <option value="BRITANNIA">BRITANNIA</option>
+            <option value="DABUR">DABUR</option>
+          </optgroup>
+          <optgroup label="Pharma">
+            <option value="SUNPHARMA">SUNPHARMA</option>
+            <option value="DRREDDY">DRREDDY</option>
+            <option value="CIPLA">CIPLA</option>
+            <option value="DIVISLAB">DIVISLAB</option>
+          </optgroup>
+          <optgroup label="Auto">
+            <option value="MARUTI">MARUTI</option>
+            <option value="TATAMOTORS">TATAMOTORS</option>
+            <option value="M&M">M&M</option>
+            <option value="BAJAJ-AUTO">BAJAJ-AUTO</option>
+            <option value="EICHERMOT">EICHERMOT</option>
+          </optgroup>
+          <optgroup label="Metals">
+            <option value="TATASTEEL">TATASTEEL</option>
+            <option value="JSWSTEEL">JSWSTEEL</option>
+            <option value="HINDALCO">HINDALCO</option>
+            <option value="VEDL">VEDL</option>
+          </optgroup>
+          <optgroup label="Others">
+            <option value="LT">LT</option>
+            <option value="ADANIPORTS">ADANIPORTS</option>
+            <option value="BHARTIARTL">BHARTIARTL</option>
+            <option value="TITAN">TITAN</option>
+            <option value="ASIANPAINT">ASIANPAINT</option>
+            <option value="APOLLOHOSP">APOLLOHOSP</option>
+            <option value="SBILIFE">SBILIFE</option>
+            <option value="HDFCLIFE">HDFCLIFE</option>
+            <option value="ULTRACEMCO">ULTRACEMCO</option>
+            <option value="GRASIM">GRASIM</option>
+            <option value="SIEMENS">SIEMENS</option>
+          </optgroup>
         </select>
       </div>
 
       <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--accent-cyan); background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-sm); padding: 7px 14px; font-family: var(--font-mono);">
-        <span>💰 90% Capital Allocated</span> &nbsp;|&nbsp; <span>🎯 +18% Target (15-20%)</span> &nbsp;|&nbsp; <span>🛑 -5% Stop Loss</span> &nbsp;|&nbsp; <span>⚡ Auto Square-Off</span>
+        <span>💰 90% Capital</span> &nbsp;|&nbsp; <span>🎯 +18% Target</span> &nbsp;|&nbsp; <span>🛑 -5% Stop</span> &nbsp;|&nbsp; <span>⚡ Auto Square-Off</span> &nbsp;|&nbsp; <span id="universeCount">50 Nifty stocks</span>
       </div>
 
       <div style="display: flex; gap: 10px;">
         <button id="btnRunCycle" class="btn btn-primary" onclick="triggerDecisionCycle()">
-          ⚡ Run Autonomous Cycle
+          ⚡ Run Manual Cycle
         </button>
         <button id="btnSquareOff" class="btn btn-secondary" onclick="squareOffAll()">
           Square-Off MIS
         </button>
       </div>
+    </div>
+
+    <!-- Company Universe Analysis Table -->
+    <div class="section-title" id="universeSection" style="display:none;">
+      <span>📊 Full Nifty 50 Universe Analysis</span>
+      <div style="display:flex; gap:16px; font-size:12px; font-family: var(--font-mono);">
+        <span>Total: <strong id="uTotal" style="color:var(--text-main);">0</strong></span>
+        <span style="color:var(--accent-green);">BUY: <strong id="uBuy">0</strong></span>
+        <span style="color:var(--accent-red);">SELL: <strong id="uSell">0</strong></span>
+        <span style="color:var(--accent-yellow);">Trades Placed: <strong id="uTrades">0</strong></span>
+        <span style="color:var(--text-muted);">Skipped: <strong id="uSkip">0</strong></span>
+      </div>
+    </div>
+    <div id="universePanel" style="display:none;" class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Sector</th>
+            <th>Price (₹)</th>
+            <th>Fund Signal</th>
+            <th>Tech Signal</th>
+            <th>Gate</th>
+            <th>Win Prob</th>
+            <th>Consensus</th>
+            <th>Action</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody id="universeTableBody">
+          <tr><td colspan="10" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Live Auto-Trade Activity Feed -->
@@ -1045,6 +1137,14 @@
             </tr>`;
           }).join('');
         }
+        // ── UNIVERSE ANALYSIS TABLE ──────────────────────────────────────────
+        const analysisSummary = data.analysis_summary || {};
+        const companies = Object.values(analysisSummary);
+        if (companies.length > 0) {
+          document.getElementById('universeSection').style.display = 'flex';
+          document.getElementById('universePanel').style.display = 'block';
+          updateUniverseTable(companies);
+        }
 
       } catch (e) {
         console.error('Status fetch error:', e);
@@ -1061,11 +1161,75 @@
       setTimeout(() => t.remove(), 5000);
     }
 
+    function updateUniverseTable(companies) {
+      const tbody = document.getElementById('universeTableBody');
+      // Sort: TRADE first, then by win_prob desc
+      const sorted = [...companies].sort((a, b) => {
+        if (a.action === 'TRADE' && b.action !== 'TRADE') return -1;
+        if (b.action === 'TRADE' && a.action !== 'TRADE') return 1;
+        return (b.win_prob || 0) - (a.win_prob || 0);
+      });
+
+      const buyCount   = companies.filter(c => c.action === 'TRADE' && c.tech_direction === 'LONG').length;
+      const sellCount  = companies.filter(c => c.action === 'TRADE' && c.tech_direction === 'SHORT').length;
+      const tradeCount = companies.filter(c => c.action === 'TRADE').length;
+      const skipCount  = companies.filter(c => c.action !== 'TRADE').length;
+
+      document.getElementById('uTotal').textContent = companies.length;
+      document.getElementById('uBuy').textContent   = buyCount;
+      document.getElementById('uSell').textContent  = sellCount;
+      document.getElementById('uTrades').textContent = tradeCount;
+      document.getElementById('uSkip').textContent  = skipCount;
+      document.getElementById('universeCount').textContent = companies.length + ' companies scanned';
+
+      tbody.innerHTML = sorted.map(c => {
+        const isTraded  = c.action === 'TRADE';
+        const fundPill  = c.fund_direction === 'LONG' ? 'pill-green' : (c.fund_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
+        const techPill  = c.tech_direction === 'LONG' ? 'pill-green' : (c.tech_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
+        const actPill   = isTraded ? 'pill-green' : 'pill-gray';
+        const gateIcon  = c.gate_passed ? '<span style="color:var(--accent-green);">PASS</span>' : '<span style="color:var(--text-dim);">FAIL</span>';
+        const winPct    = c.win_prob ? (c.win_prob * 100).toFixed(1) + '%' : '--';
+        const winColor  = c.win_prob >= 0.68 ? 'var(--accent-green)' : (c.win_prob >= 0.55 ? 'var(--accent-yellow)' : 'var(--text-dim)');
+        const shortR    = (c.reason || '').substring(0, 55) + ((c.reason || '').length > 55 ? '...' : '');
+        const rowBg     = isTraded ? 'background:rgba(16,185,129,0.07);' : '';
+        const px        = c.price ? '\u20b9' + c.price.toLocaleString('en-IN') : '--';
+        return `<tr style="${rowBg}">
+          <td><strong style="color:${isTraded ? 'var(--accent-green)' : 'var(--text-main)'}">${c.symbol}</strong></td>
+          <td style="font-size:11px; color:var(--text-muted);">${c.sector}</td>
+          <td style="font-family:var(--font-mono); font-size:12px;">${px}</td>
+          <td><span class="badge-pill ${fundPill}">${c.fund_direction}</span></td>
+          <td><span class="badge-pill ${techPill}">${c.tech_direction}</span></td>
+          <td>${gateIcon}</td>
+          <td style="color:${winColor}; font-weight:700; font-family:var(--font-mono);">${winPct}</td>
+          <td>${c.consensus ? '<span style="color:var(--accent-green);">YES</span>' : '<span style="color:var(--text-dim);">NO</span>'}</td>
+          <td><span class="badge-pill ${actPill}">${c.action}</span></td>
+          <td style="font-size:11px; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${shortR}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Fetch full analysis on demand (called every 60s after connect)
+    async function fetchFullAnalysis() {
+      if (!isConnected) return;
+      try {
+        const res = await fetch('/api/analysis');
+        const data = await res.json();
+        if (data.companies && data.companies.length > 0) {
+          document.getElementById('universeSection').style.display = 'flex';
+          document.getElementById('universePanel').style.display = 'block';
+          updateUniverseTable(data.companies);
+        }
+      } catch (e) {
+        console.error('Analysis fetch error:', e);
+      }
+    }
+
     // Initial check on load
     window.addEventListener('DOMContentLoaded', () => {
       loadSavedCredentials();
       updateDashboard();
       setInterval(updateDashboard, 5000);
+      setInterval(fetchFullAnalysis, 60000);  // Refresh full analysis every 60s
     });
   </script>
 </body>

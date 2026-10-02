@@ -33,6 +33,7 @@ from src.broker.paper import PaperBroker
 from src.broker.angel_one import AngelOneAdapter
 from src.memory.journal import TradeJournal
 from src.orchestrator.pipeline import TradingOrchestrator
+from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES
 
 # Global state
 journal = TradeJournal(db_path="trade_journal.db")
@@ -58,9 +59,10 @@ recent_decisions = []
 auto_trading_active = False
 auto_trading_thread = None
 auto_trade_log = []        # Stores auto-trade events for dashboard
+analysis_summary = {}      # Latest per-company analysis snapshot for dashboard
 
-# Watchlist scanned automatically after broker connect
-AUTO_WATCHLIST = ["RELIANCE", "TCS", "SBIN", "HDFCBANK", "ICICIBANK", "INFY"]
+# Full Nifty 50 watchlist — ALL companies are analysed and traded
+AUTO_WATCHLIST = list(NIFTY50_UNIVERSE.keys())  # 50 stocks
 AUTO_SCAN_INTERVAL_SECONDS = 60   # Scan every 60 seconds
 
 def init_orchestrator(broker_instance):
@@ -105,51 +107,75 @@ def auto_trading_loop():
                 break
             try:
                 result = run_symbol_cycle(symbol, orchestrator)
-                action  = result.get("action", "NO_TRADE")
-                reason  = result.get("reason", "")
-                order   = result.get("order")
+                action      = result.get("action", "NO_TRADE")
+                reason      = result.get("reason", "")
+                order       = result.get("order")
                 gate_passed = result.get("features", {}).get("gate_passed", False)
                 win_prob    = result.get("tech_confidence", 0)
+                tech_dir    = result.get("tech_direction", "NEUTRAL")
+                fund_dir    = result.get("fund_direction", "NEUTRAL")
+
+                # Update per-company analysis snapshot for dashboard
+                cdata = NIFTY50_UNIVERSE.get(symbol, {})
+                analysis_summary[symbol] = {
+                    "symbol":         symbol,
+                    "sector":         cdata.get("sector", "EQUITY"),
+                    "price":          cdata.get("price", 0),
+                    "fund_direction": fund_dir,
+                    "tech_direction": tech_dir,
+                    "action":         action,
+                    "gate_passed":    gate_passed,
+                    "win_prob":       round(win_prob, 4),
+                    "consensus":      result.get("consensus_reached", False),
+                    "reason":         reason,
+                    "orderflow":      result.get("orderflow", {}),
+                    "features":       result.get("features", {}),
+                    "order":          order,
+                    "scanned_at":     datetime.now().isoformat(),
+                    "scan_no":        scan_count,
+                }
 
                 event = {
-                    "scan": scan_count,
+                    "scan":      scan_count,
                     "timestamp": datetime.now().isoformat(),
-                    "symbol": symbol,
-                    "action": action,
-                    "reason": reason,
+                    "symbol":    symbol,
+                    "sector":    cdata.get("sector", "EQUITY"),
+                    "action":    action,
+                    "reason":    reason,
                     "gate_passed": gate_passed,
-                    "win_prob": win_prob,
-                    "order": order
+                    "win_prob":  win_prob,
+                    "order":     order
                 }
                 auto_trade_log.append(event)
 
-                # Keep last 100 auto-trade events
-                if len(auto_trade_log) > 100:
-                    auto_trade_log = auto_trade_log[-100:]
+                # Keep last 200 auto-trade events
+                if len(auto_trade_log) > 200:
+                    auto_trade_log = auto_trade_log[-200:]
 
                 recent_decisions.append({
-                    "timestamp": datetime.now().isoformat(),
-                    "symbol": symbol,
-                    "fund_direction": result.get("fund_direction", "NEUTRAL"),
-                    "tech_direction": result.get("tech_direction", "NEUTRAL"),
-                    "consensus": result.get("consensus_reached", False),
-                    "action": action,
-                    "reason": reason,
-                    "auto": True,
-                    "orderflow": result.get("orderflow", {})
+                    "timestamp":      datetime.now().isoformat(),
+                    "symbol":         symbol,
+                    "fund_direction": fund_dir,
+                    "tech_direction": tech_dir,
+                    "consensus":      result.get("consensus_reached", False),
+                    "action":         action,
+                    "reason":         reason,
+                    "auto":           True,
+                    "orderflow":      result.get("orderflow", {})
                 })
 
-                if len(recent_decisions) > 50:
-                    recent_decisions = recent_decisions[-50:]
+                if len(recent_decisions) > 100:
+                    recent_decisions = recent_decisions[-100:]
 
                 if action == "TRADE" and order:
                     trades_placed += 1
-                    print(f"[AUTO-TRADE] ✅ PLACED: {symbol} | {reason} | Win prob: {win_prob:.1%}")
+                    print(f"[AUTO-TRADE] PLACED: {symbol} | {reason} | Win prob: {win_prob:.1%}")
                 else:
-                    print(f"[AUTO-TRADE] ⏩ SKIP: {symbol} — {reason}")
+                    print(f"[AUTO-TRADE] SKIP: {symbol} | gate={gate_passed} | {reason[:55]}")
 
             except Exception as e:
                 logger.error(f"[AUTO-TRADE] Error scanning {symbol}: {e}")
+
 
         print(f"[AUTO-TRADE] Scan #{scan_count} complete — {trades_placed} trade(s) placed. Sleeping {AUTO_SCAN_INTERVAL_SECONDS}s...")
         
@@ -251,9 +277,11 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "journal_stats": stats,
                 "recent_decisions": recent_decisions[-20:],
                 "auto_trading_active": auto_trading_active,
-                "auto_trade_log": auto_trade_log[-10:],
+                "auto_trade_log": auto_trade_log[-20:],
                 "watchlist": AUTO_WATCHLIST,
-                "scan_interval_seconds": AUTO_SCAN_INTERVAL_SECONDS
+                "scan_interval_seconds": AUTO_SCAN_INTERVAL_SECONDS,
+                "total_universe_size": len(AUTO_WATCHLIST),
+                "analysis_summary": analysis_summary
             })
 
         else:
@@ -423,21 +451,27 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     "message": f"Updated {symbol} price to ₹{price:.2f}. Limits not breached."
                 })
 
+        elif self.path == "/api/analysis":
+            # Return full per-company analysis snapshot for dashboard
+            self._send_json(200, {
+                "status": "ok",
+                "total": len(analysis_summary),
+                "companies": list(analysis_summary.values()),
+                "trades_placed": sum(1 for v in analysis_summary.values() if v["action"] == "TRADE"),
+                "gate_passed_count": sum(1 for v in analysis_summary.values() if v["gate_passed"]),
+                "scanned_at": datetime.now().isoformat()
+            })
+
         else:
             self._send_json(404, {"error": "Not Found"})
 
 def run_symbol_cycle(symbol: str, orch: TradingOrchestrator) -> Dict[str, Any]:
-    """Helper to run a realistic evaluation cycle for UI demo & live testing."""
-    price_map = {
-        "RELIANCE": 2920.0,
-        "TCS": 4150.0,
-        "INFY": 1880.0,
-        "HDFCBANK": 1660.0,
-        "ICICIBANK": 1240.0,
-        "SBIN": 795.0
-    }
-    px = price_map.get(symbol, 2000.0)
+    """Run a full 3-agent evaluation cycle using per-company data from the Nifty 50 universe."""
+    # ── Company data from universe ─────────────────────────────────────────
+    cdata = NIFTY50_UNIVERSE.get(symbol, {})
+    px    = cdata.get("price", 2000.0)
 
+    # ── Shared macro context ───────────────────────────────────────────────
     macro = MacroContext(
         timestamp=datetime.now(),
         nifty50_close=25450.0,
@@ -451,66 +485,59 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator) -> Dict[str, Any]:
         usd_inr=83.85
     )
 
-    quote = Quote(symbol=symbol, timestamp=datetime.now(), last_price=px, bid_price=px-0.2, ask_price=px+0.2, volume=2_000_000)
-    is_infy_event = (symbol == "INFY") # Demonstrate event veto
-
-    fundamentals = CompanyFundamentals(
-        symbol=symbol, sector="EQUITY", pe_ratio=26.0, sector_pe=28.0, pb_ratio=3.0,
-        roe_percent=18.0, roce_percent=20.0, debt_to_equity=0.3, revenue_growth_yoy=12.0,
-        pat_growth_yoy=16.0, promoter_holding_percent=50.0, promoter_pledge_percent=0.0,
-        is_results_due_in_24h=is_infy_event
+    quote = Quote(
+        symbol=symbol, timestamp=datetime.now(),
+        last_price=px, bid_price=px - 0.2, ask_price=px + 0.2,
+        volume=cdata.get("volume", 2_000_000)
     )
 
-    orderflow_profiles = {
-        "RELIANCE": {
-            "bid_depth_qty": 350_000, "ask_depth_qty": 210_000,
-            "buy_volume": 1_250_000, "sell_volume": 850_000,
-            "cumulative_delta": 400_000, "total_volume": 2_100_000,
-            "institutional_block_buys": 65_000, "institutional_block_sells": 15_000
-        },
-        "TCS": {
-            "bid_depth_qty": 140_000, "ask_depth_qty": 280_000,
-            "buy_volume": 420_000, "sell_volume": 680_000,
-            "cumulative_delta": -260_000, "total_volume": 1_100_000,
-            "institutional_block_buys": 5_000, "institutional_block_sells": 45_000
-        },
-        "INFY": {
-            "bid_depth_qty": 200_000, "ask_depth_qty": 190_000,
-            "buy_volume": 1_620_000, "sell_volume": 1_580_000,
-            "cumulative_delta": 40_000, "total_volume": 3_200_000,
-            "institutional_block_buys": 20_000, "institutional_block_sells": 18_000
-        },
-        "SBIN": {
-            "bid_depth_qty": 550_000, "ask_depth_qty": 320_000,
-            "buy_volume": 2_100_000, "sell_volume": 1_400_000,
-            "cumulative_delta": 700_000, "total_volume": 3_500_000,
-            "institutional_block_buys": 120_000, "institutional_block_sells": 25_000
-        },
-        "HDFCBANK": {
-            "bid_depth_qty": 410_000, "ask_depth_qty": 360_000,
-            "buy_volume": 1_800_000, "sell_volume": 1_500_000,
-            "cumulative_delta": 300_000, "total_volume": 3_300_000,
-            "institutional_block_buys": 80_000, "institutional_block_sells": 30_000
-        },
-        "ICICIBANK": {
-            "bid_depth_qty": 300_000, "ask_depth_qty": 260_000,
-            "buy_volume": 1_400_000, "sell_volume": 1_200_000,
-            "cumulative_delta": 200_000, "total_volume": 2_600_000,
-            "institutional_block_buys": 40_000, "institutional_block_sells": 20_000
-        }
-    }
+    # ── Per-company fundamentals ───────────────────────────────────────────
+    fundamentals = CompanyFundamentals(
+        symbol=symbol,
+        sector=cdata.get("sector", "EQUITY"),
+        pe_ratio=cdata.get("pe", 25.0),
+        sector_pe=cdata.get("sector_pe", 25.0),
+        pb_ratio=cdata.get("pb", 3.0),
+        roe_percent=cdata.get("roe", 15.0),
+        roce_percent=cdata.get("roce", 18.0),
+        debt_to_equity=cdata.get("de", 0.5),
+        revenue_growth_yoy=cdata.get("rev_g", 10.0),
+        pat_growth_yoy=cdata.get("pat_g", 12.0),
+        promoter_holding_percent=cdata.get("promoter", 50.0),
+        promoter_pledge_percent=cdata.get("pledge", 0.0),
+        is_results_due_in_24h=cdata.get("event", False),
+        is_fo_ban=cdata.get("fo_ban", False)
+    )
+
+    # ── Per-company technical indicators ──────────────────────────────────
+    tp = TECHNICAL_PROFILES.get(symbol, {})
+    adx_val      = tp.get("adx", 22.0)
+    rsi_val      = tp.get("rsi14", 50.0)
+    macd_val     = tp.get("macd_hist", 0.5)
+    vol_ratio    = tp.get("volume_ratio", 1.0)
+    vwap_ratio   = tp.get("vwap_ratio", 1.0)
+    ema20_ratio  = tp.get("ema20_r", 0.995)
+    ema50_ratio  = tp.get("ema50_r", 0.980)
+    ema200_ratio = tp.get("ema200_r", 0.940)
 
     tech_inputs = {
-        "ema20": px * 0.99, "ema50": px * 0.97, "ema200": px * 0.92,
-        "adx": 30.0, "rsi14": 62.0, "macd_hist": 2.5,
-        "atr14": px * 0.012, "vwap": px * 0.995, "volume_ratio": 1.4,
-        "sector_rs_score": 68.0, "news_sentiment_score": 0.4,
-        "orderflow": orderflow_profiles.get(symbol, orderflow_profiles["RELIANCE"])
+        "ema20":              px * ema20_ratio,
+        "ema50":              px * ema50_ratio,
+        "ema200":             px * ema200_ratio,
+        "adx":                adx_val,
+        "rsi14":              rsi_val,
+        "macd_hist":          macd_val,
+        "atr14":              px * 0.012,
+        "vwap":               px / vwap_ratio,
+        "volume_ratio":       vol_ratio,
+        "sector_rs_score":    65.0,
+        "news_sentiment_score": 0.3,
+        "orderflow":          ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {}))
     }
 
     return orch.run_cycle_for_symbol(
         symbol=symbol,
-        sector="EQUITY",
+        sector=cdata.get("sector", "EQUITY"),
         quote=quote,
         macro=macro,
         fundamentals=fundamentals,
@@ -526,6 +553,7 @@ def main():
     print("  AUTONOMOUS 3-AGENT TRADING SYSTEM")
     print("  Angel One SmartAPI Gateway & Institutional Trading Console")
     print(f"  Web Interface running at: http://{host}:{port}")
+    print(f"  Universe: {len(NIFTY50_UNIVERSE)} Nifty 50 companies")
     print("=" * 75)
 
     server = HTTPServer((host, port), TradingSystemWebServer)
