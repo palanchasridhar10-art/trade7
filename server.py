@@ -9,9 +9,12 @@ import sys
 import json
 import time
 import threading
+import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger("trading_server")
 
 # Ensure unbuffered real-time logs
 if sys.platform == "win32":
@@ -52,6 +55,13 @@ active_mode = None
 is_broker_connected = False
 system_start_time = datetime.now()
 recent_decisions = []
+auto_trading_active = False
+auto_trading_thread = None
+auto_trade_log = []        # Stores auto-trade events for dashboard
+
+# Watchlist scanned automatically after broker connect
+AUTO_WATCHLIST = ["RELIANCE", "TCS", "SBIN", "HDFCBANK", "ICICIBANK", "INFY"]
+AUTO_SCAN_INTERVAL_SECONDS = 60   # Scan every 60 seconds
 
 def init_orchestrator(broker_instance):
     return TradingOrchestrator(
@@ -64,6 +74,108 @@ def init_orchestrator(broker_instance):
     )
 
 orchestrator = None
+
+def auto_trading_loop():
+    """Background thread: scans watchlist every 60s and auto-places high-conviction trades.
+    
+    Only places trades when ALL conditions pass:
+    - 4 of 5 technical indicators aligned
+    - Order Flow confirms direction
+    - ADX >= 28 (strong trend, no chop)
+    - Win probability >= 68%
+    - 90% capital allocation per position
+    - 5% stop loss / 15-20% profit target auto square-off
+    """
+    global auto_trading_active, orchestrator, recent_decisions, auto_trade_log
+    
+    print("[AUTO-TRADE] Background trading loop STARTED — scanning watchlist every 60s.")
+    scan_count = 0
+
+    while auto_trading_active:
+        if not is_broker_connected or not orchestrator:
+            time.sleep(5)
+            continue
+
+        scan_count += 1
+        print(f"[AUTO-TRADE] Scan #{scan_count} — checking {len(AUTO_WATCHLIST)} symbols...")
+
+        trades_placed = 0
+        for symbol in AUTO_WATCHLIST:
+            if not auto_trading_active:
+                break
+            try:
+                result = run_symbol_cycle(symbol, orchestrator)
+                action  = result.get("action", "NO_TRADE")
+                reason  = result.get("reason", "")
+                order   = result.get("order")
+                gate_passed = result.get("features", {}).get("gate_passed", False)
+                win_prob    = result.get("tech_confidence", 0)
+
+                event = {
+                    "scan": scan_count,
+                    "timestamp": datetime.now().isoformat(),
+                    "symbol": symbol,
+                    "action": action,
+                    "reason": reason,
+                    "gate_passed": gate_passed,
+                    "win_prob": win_prob,
+                    "order": order
+                }
+                auto_trade_log.append(event)
+
+                # Keep last 100 auto-trade events
+                if len(auto_trade_log) > 100:
+                    auto_trade_log = auto_trade_log[-100:]
+
+                recent_decisions.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "symbol": symbol,
+                    "fund_direction": result.get("fund_direction", "NEUTRAL"),
+                    "tech_direction": result.get("tech_direction", "NEUTRAL"),
+                    "consensus": result.get("consensus_reached", False),
+                    "action": action,
+                    "reason": reason,
+                    "auto": True,
+                    "orderflow": result.get("orderflow", {})
+                })
+
+                if len(recent_decisions) > 50:
+                    recent_decisions = recent_decisions[-50:]
+
+                if action == "TRADE" and order:
+                    trades_placed += 1
+                    print(f"[AUTO-TRADE] ✅ PLACED: {symbol} | {reason} | Win prob: {win_prob:.1%}")
+                else:
+                    print(f"[AUTO-TRADE] ⏩ SKIP: {symbol} — {reason}")
+
+            except Exception as e:
+                logger.error(f"[AUTO-TRADE] Error scanning {symbol}: {e}")
+
+        print(f"[AUTO-TRADE] Scan #{scan_count} complete — {trades_placed} trade(s) placed. Sleeping {AUTO_SCAN_INTERVAL_SECONDS}s...")
+        
+        # Sleep in 5s increments so loop can be stopped quickly
+        for _ in range(AUTO_SCAN_INTERVAL_SECONDS // 5):
+            if not auto_trading_active:
+                break
+            time.sleep(5)
+
+    print("[AUTO-TRADE] Background trading loop STOPPED.")
+
+def start_auto_trading():
+    """Start background trading thread if not already running."""
+    global auto_trading_active, auto_trading_thread
+    if auto_trading_active and auto_trading_thread and auto_trading_thread.is_alive():
+        return  # Already running
+    auto_trading_active = True
+    auto_trading_thread = threading.Thread(target=auto_trading_loop, daemon=True, name="AutoTrader")
+    auto_trading_thread.start()
+    print("[AUTO-TRADE] Thread launched — autonomous trading is now ACTIVE.")
+
+def stop_auto_trading():
+    """Stop the background trading thread."""
+    global auto_trading_active
+    auto_trading_active = False
+    print("[AUTO-TRADE] Stop signal sent.")
 
 class TradingSystemWebServer(BaseHTTPRequestHandler):
     """HTTP handler serving the Web UI and REST API for broker authentication and trading operations."""
@@ -137,7 +249,11 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "portfolio": portfolio.model_dump() if portfolio else None,
                 "positions": portfolio.open_positions if portfolio else {},
                 "journal_stats": stats,
-                "recent_decisions": recent_decisions[-10:]
+                "recent_decisions": recent_decisions[-20:],
+                "auto_trading_active": auto_trading_active,
+                "auto_trade_log": auto_trade_log[-10:],
+                "watchlist": AUTO_WATCHLIST,
+                "scan_interval_seconds": AUTO_SCAN_INTERVAL_SECONDS
             })
 
         else:
@@ -190,11 +306,15 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     active_mode = "live"
                     is_broker_connected = True
                     orchestrator = init_orchestrator(adapter)
+                    # AUTO-TRADE: Start autonomous trading immediately on connection
+                    start_auto_trading()
                     self._send_json(200, {
                         "status": "success",
-                        "message": f"Connected successfully to Angel One ({client_code})!",
+                        "message": f"Connected to Angel One ({client_code})! Autonomous trading loop STARTED — scanning {len(AUTO_WATCHLIST)} symbols every {AUTO_SCAN_INTERVAL_SECONDS}s.",
                         "client_code": client_code,
-                        "mode": "live"
+                        "mode": "live",
+                        "auto_trading": True,
+                        "watchlist": AUTO_WATCHLIST
                     })
                 else:
                     err = adapter.last_error or "Angel One login failed. Please check your Client ID, MPIN, or OTP."
@@ -204,29 +324,34 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     })
 
             else: # Paper Simulation Mode
-                paper_code = client_code or "PAPER_DEMO"
+                paper_code = payload.get("client_code", "").strip() or "PAPER_DEMO"
                 active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
                 active_client_code = paper_code
                 active_mode = "paper"
                 is_broker_connected = True
                 orchestrator = init_orchestrator(active_broker)
+                # AUTO-TRADE: Start autonomous trading immediately on paper connect
+                start_auto_trading()
 
                 print(f">> Initialized Paper Trading Broker for client {paper_code} with ₹10,00,000 capital.")
                 self._send_json(200, {
                     "status": "success",
-                    "message": f"Connected in Paper Trading Simulation mode as {paper_code}.",
+                    "message": f"Paper Trading ACTIVE as {paper_code}! Autonomous trading loop STARTED — scanning {len(AUTO_WATCHLIST)} symbols every {AUTO_SCAN_INTERVAL_SECONDS}s.",
                     "client_code": paper_code,
-                    "mode": "paper"
+                    "mode": "paper",
+                    "auto_trading": True,
+                    "watchlist": AUTO_WATCHLIST
                 })
 
         elif self.path == "/api/disconnect":
+            stop_auto_trading()   # Stop trading loop first
             if active_broker:
                 active_broker.disconnect()
             active_broker = None
             active_client_code = None
             active_mode = None
             is_broker_connected = False
-            self._send_json(200, {"status": "success", "message": "Broker disconnected."})
+            self._send_json(200, {"status": "success", "message": "Broker disconnected and auto-trading loop stopped."})
 
         elif self.path == "/api/cycle":
             if not is_broker_connected or not orchestrator:

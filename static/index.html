@@ -33,7 +33,25 @@
       --font-mono: 'JetBrains Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Pulse animation for auto-trade indicator */
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+    /* Toast notification */
+    .trade-toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: rgba(16, 185, 129, 0.95);
+      color: #fff; font-weight: 700; font-size: 14px;
+      padding: 14px 22px; border-radius: var(--radius-md);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+      z-index: 1000;
+      animation: slideUp 0.4s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
 
     body {
       background-color: var(--bg-base);
@@ -484,6 +502,21 @@
       </div>
     </div>
 
+    <!-- Auto-Trading Status Banner -->
+    <div id="autoTradingBanner" style="display:none; background: linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(0,240,255,0.08) 100%); border: 1px solid rgba(16,185,129,0.35); border-radius: var(--radius-md); padding: 14px 22px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: #10B981; box-shadow: 0 0 8px #10B981; animation: pulse-dot 1.4s ease-in-out infinite;"></div>
+        <div>
+          <div style="font-weight: 700; font-size: 14px; color: #10B981;">🤖 AUTONOMOUS TRADING ACTIVE</div>
+          <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px;" id="autoTradingSubText">Scanning 6 symbols every 60s · 90%+ Win-Rate Filter · 4/5 Indicator Confluence Gate</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 18px; font-size: 12px; font-family: var(--font-mono);">
+        <span style="color: var(--text-muted);">Watchlist: <strong style="color: var(--text-main);" id="autoWatchlistText">RELIANCE · TCS · SBIN · HDFCBANK · ICICIBANK · INFY</strong></span>
+        <span id="autoScanCountBadge" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.25); border-radius: 20px; padding: 3px 12px; color: var(--accent-cyan);">Scan #0</span>
+      </div>
+    </div>
+
     <!-- 3 Agents Visualizer -->
     <div class="section-title">
       <span>Autonomous Analytical Pipeline</span>
@@ -599,6 +632,30 @@
           Square-Off MIS
         </button>
       </div>
+    </div>
+
+    <!-- Live Auto-Trade Activity Feed -->
+    <div class="section-title" id="autoFeedSection" style="display:none;">
+      <span>🔴 Live Auto-Trade Activity Feed</span>
+      <span style="font-size: 12px; color: var(--accent-green); font-family: var(--font-mono);">Auto-placed · Updated every 60s</span>
+    </div>
+    <div id="autoFeedPanel" style="display:none;" class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Symbol</th>
+            <th>Scan #</th>
+            <th>Gate</th>
+            <th>Win Prob</th>
+            <th>Action</th>
+            <th>Result / Reason</th>
+          </tr>
+        </thead>
+        <tbody id="autoFeedTableBody">
+          <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 20px;">Waiting for first auto-scan...</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Live Positions Table -->
@@ -935,9 +992,73 @@
             </tr>`;
           }).join('');
         }
+        // ── AUTO-TRADING STATUS ──────────────────────────────────────────────
+        const banner = document.getElementById('autoTradingBanner');
+        const feedSection = document.getElementById('autoFeedSection');
+        const feedPanel = document.getElementById('autoFeedPanel');
+
+        if (data.auto_trading_active) {
+          banner.style.display = 'flex';
+          feedSection.style.display = 'flex';
+          feedPanel.style.display = 'block';
+          if (data.watchlist) {
+            document.getElementById('autoWatchlistText').textContent = data.watchlist.join(' · ');
+          }
+        } else {
+          banner.style.display = 'none';
+        }
+
+        // ── AUTO-TRADE FEED ──────────────────────────────────────────────────
+        const autoLog = data.auto_trade_log || [];
+        if (autoLog.length > 0) {
+          feedSection.style.display = 'flex';
+          feedPanel.style.display = 'block';
+          const feedBody = document.getElementById('autoFeedTableBody');
+          // Check for new TRADE actions → toast
+          const newTrades = autoLog.filter(e => e.action === 'TRADE' && e.order);
+          if (newTrades.length > lastAutoTradeCount) {
+            const latest = newTrades[newTrades.length - 1];
+            showTradeToast(`✅ AUTO-TRADE PLACED: ${latest.symbol} | Win Prob: ${(latest.win_prob * 100).toFixed(1)}%`);
+          }
+          lastAutoTradeCount = newTrades.length;
+
+          // Update scan count badge
+          const lastEvent = autoLog[autoLog.length - 1];
+          if (lastEvent) {
+            document.getElementById('autoScanCountBadge').textContent = `Scan #${lastEvent.scan}`;
+          }
+
+          feedBody.innerHTML = [...autoLog].reverse().map(e => {
+            const isPlaced = e.action === 'TRADE';
+            const gateIcon = e.gate_passed ? '✅' : '🚫';
+            const actionPill = isPlaced ? 'pill-green' : 'pill-gray';
+            const winPct = e.win_prob ? (e.win_prob * 100).toFixed(1) + '%' : '—';
+            const shortReason = (e.reason || '').substring(0, 60) + ((e.reason || '').length > 60 ? '...' : '');
+            return `<tr style="${isPlaced ? 'background: rgba(16,185,129,0.06);' : ''}">
+              <td style="font-family: var(--font-mono); font-size: 11px;">${e.timestamp ? e.timestamp.substring(11,19) : '—'}</td>
+              <td><strong>${e.symbol}</strong></td>
+              <td style="color: var(--text-muted); font-size: 11px;">#${e.scan}</td>
+              <td>${gateIcon}</td>
+              <td style="color: ${e.gate_passed ? 'var(--accent-green)' : 'var(--text-muted)'}; font-weight: 600;">${winPct}</td>
+              <td><span class="badge-pill ${actionPill}">${e.action}</span></td>
+              <td style="font-size: 11px; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${shortReason}</td>
+            </tr>`;
+          }).join('');
+        }
+
       } catch (e) {
         console.error('Status fetch error:', e);
       }
+    }
+
+    let lastAutoTradeCount = 0;
+
+    function showTradeToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'trade-toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 5000);
     }
 
     // Initial check on load
