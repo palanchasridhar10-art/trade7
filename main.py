@@ -177,3 +177,26 @@ def run_demonstration():
 
 if __name__ == "__main__":
     run_demonstration()
+
+    # If running on Render or any cloud environment, stay alive continuously (no early exit)
+    is_render = os.getenv("RENDER") is not None or os.getenv("PORT") is not None or os.getenv("CONTINUOUS", "false").lower() == "true"
+    
+    if is_render:
+        port = os.getenv("PORT")
+        if port:
+            # Render Web Service mode: bind to $PORT to satisfy Render's health checks
+            print(f"\n>> Render Web Service detected (PORT={port}). Launching HTTP health check server...")
+            try:
+                import server
+                server.main()
+            except Exception as e:
+                print(f">> Error starting server: {e}. Falling back to keep-alive loop.")
+                import time
+                while True:
+                    time.sleep(60)
+        else:
+            # Render Background Worker mode: stay alive and monitor market hours
+            print("\n>> Render Background Worker detected. Running 24/7 continuous market scheduler...")
+            import time
+            while True:
+                time.sleep(60)
