@@ -34,33 +34,51 @@ class AngelOneAdapter(BaseBrokerAdapter):
         self.refresh_token = None
         self.feed_token = None
         self.is_connected = False
+        self.last_error = None
 
-    def connect(self) -> bool:
-        """Establish authenticated SmartAPI session using client credentials and TOTP."""
-        if not (self.api_key and self.client_code and self.pin and self.totp_secret):
-            logger.warning("Angel One credentials missing in environment. Running in offline/adapter-ready mode.")
+    def connect(self, otp_or_secret: Optional[str] = None) -> bool:
+        """Establish authenticated SmartAPI session using client credentials and TOTP or direct OTP."""
+        totp_input = (otp_or_secret or self.totp_secret or "").strip().replace(" ", "")
+        
+        if not (self.api_key and self.client_code and self.pin and totp_input):
+            self.last_error = "Missing credentials: API Key, Client Code, MPIN, and OTP/TOTP are required."
+            logger.warning(self.last_error)
             return False
 
         try:
-            # Import lazily to avoid strict dependency when testing in paper mode
             from SmartApi import SmartConnect
             import pyotp
 
             self.smart_api = SmartConnect(api_key=self.api_key)
-            totp = pyotp.TOTP(self.totp_secret).now()
-            data = self.smart_api.generateSession(self.client_code, self.pin, totp)
+
+            # Check if user entered a 6-digit OTP directly (e.g. 123456) or a Base32 secret key
+            if len(totp_input) == 6 and totp_input.isdigit():
+                totp_code = totp_input
+            else:
+                # Generate TOTP from Base32 secret
+                try:
+                    totp_code = pyotp.TOTP(totp_input).now()
+                except Exception as ex:
+                    self.last_error = f"Invalid TOTP Secret Key format: {ex}. You can enter your current 6-digit OTP directly."
+                    return False
+
+            data = self.smart_api.generateSession(self.client_code, self.pin, totp_code)
 
             if data.get("status"):
                 self.auth_token = data["data"]["jwtToken"]
                 self.refresh_token = data["data"]["refreshToken"]
                 self.feed_token = self.smart_api.getfeedToken()
                 self.is_connected = True
+                self.last_error = None
                 logger.info(f"Angel One session authenticated successfully for client {self.client_code}.")
                 return True
             else:
-                logger.error(f"Angel One authentication failed: {data.get('message')}")
+                msg = data.get("message") or "Authentication failed. Check your Client ID, MPIN, or OTP."
+                self.last_error = msg
+                logger.error(f"Angel One authentication failed: {msg}")
                 return False
         except Exception as e:
+            self.last_error = f"Connection error: {str(e)}"
             logger.error(f"Error connecting to Angel One SmartAPI: {e}")
             return False
 

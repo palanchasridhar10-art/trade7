@@ -116,6 +116,13 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
             portfolio = active_broker.get_portfolio_state() if active_broker else None
             stats = journal.get_summary_stats()
 
+            env_key = os.getenv("ANGEL_API_KEY", "")
+            env_client = os.getenv("ANGEL_CLIENT_CODE", "")
+            env_pin = os.getenv("ANGEL_PIN", "")
+            env_totp = os.getenv("ANGEL_TOTP_SECRET", "")
+            has_env_credentials = bool(env_key and env_client and env_pin and env_totp)
+            masked_client = (env_client[:2] + "****" + env_client[-2:]) if len(env_client) >= 4 else env_client
+
             self._send_json(200, {
                 "connected": is_broker_connected,
                 "broker_name": "Angel One SmartAPI" if active_mode == "live" else ("Paper Broker" if active_mode == "paper" else "None"),
@@ -124,6 +131,9 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "ist_time": ist_now.strftime("%Y-%m-%d %H:%M:%S IST"),
                 "is_market_open": NSECalendar.is_market_open(ist_now),
                 "is_trade_window_open": NSECalendar.is_trade_window_open(ist_now),
+                "has_env_credentials": has_env_credentials,
+                "env_client_code": masked_client,
+                "has_env_api_key": bool(env_key),
                 "portfolio": portfolio.model_dump() if portfolio else None,
                 "positions": portfolio.open_positions if portfolio else {},
                 "journal_stats": stats,
@@ -145,27 +155,35 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
 
         if self.path == "/api/connect":
             mode = payload.get("mode", "paper")
-            api_key = payload.get("api_key", "").strip()
-            client_code = payload.get("client_code", "").strip()
-            pin = payload.get("pin", "").strip()
-            totp_secret = payload.get("totp_secret", "").strip()
+            use_env = payload.get("use_env", False)
 
             if mode == "live":
-                if not (api_key and client_code and pin and totp_secret):
+                # If use_env or fields left blank, pull from environment variables automatically
+                api_key = (payload.get("api_key", "").strip() or os.getenv("ANGEL_API_KEY", "")).strip()
+                client_code = (payload.get("client_code", "").strip() or os.getenv("ANGEL_CLIENT_CODE", "")).strip()
+                pin = (payload.get("pin", "").strip() or os.getenv("ANGEL_PIN", "")).strip()
+                totp_input = (payload.get("totp_secret", "").strip() or payload.get("otp", "").strip() or os.getenv("ANGEL_TOTP_SECRET", "")).strip()
+
+                if not (api_key and client_code and pin and totp_input):
+                    missing = []
+                    if not api_key: missing.append("API Key")
+                    if not client_code: missing.append("Client Code")
+                    if not pin: missing.append("MPIN")
+                    if not totp_input: missing.append("OTP / TOTP")
                     self._send_json(400, {
                         "status": "error",
-                        "message": "Missing credentials. SmartAPI Key, Client Code, MPIN, and TOTP Secret are required for live mode."
+                        "message": f"Please provide: {', '.join(missing)}."
                     })
                     return
 
-                print(f"[SmartAPI] Authenticating Angel One account for client code: {client_code}...")
+                print(f"[SmartAPI] Connecting Angel One account for client: {client_code}...")
                 adapter = AngelOneAdapter(
                     api_key=api_key,
                     client_code=client_code,
                     pin=pin,
-                    totp_secret=totp_secret
+                    totp_secret=totp_input
                 )
-                success = adapter.connect()
+                success = adapter.connect(otp_or_secret=totp_input)
 
                 if success:
                     active_broker = adapter
@@ -175,14 +193,15 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     orchestrator = init_orchestrator(adapter)
                     self._send_json(200, {
                         "status": "success",
-                        "message": f"Angel One SmartAPI authenticated successfully for {client_code}",
+                        "message": f"Connected successfully to Angel One ({client_code})!",
                         "client_code": client_code,
                         "mode": "live"
                     })
                 else:
+                    err = adapter.last_error or "Angel One login failed. Please check your Client ID, MPIN, or OTP."
                     self._send_json(401, {
                         "status": "error",
-                        "message": "Angel One authentication failed. Verify API Key, MPIN, Client Code, and TOTP Secret."
+                        "message": err
                     })
 
             else: # Paper Simulation Mode
