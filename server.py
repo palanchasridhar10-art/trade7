@@ -246,7 +246,8 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "tech_direction": result.get("tech_direction", "NEUTRAL"),
                 "consensus": result.get("consensus_reached", False),
                 "action": result.get("action", "NO_TRADE"),
-                "reason": result.get("reason", "")
+                "reason": result.get("reason", ""),
+                "orderflow": result.get("orderflow", {})
             })
             self._send_json(200, result)
 
@@ -336,11 +337,51 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator) -> Dict[str, Any]:
         is_results_due_in_24h=is_infy_event
     )
 
+    orderflow_profiles = {
+        "RELIANCE": {
+            "bid_depth_qty": 350_000, "ask_depth_qty": 210_000,
+            "buy_volume": 1_250_000, "sell_volume": 850_000,
+            "cumulative_delta": 400_000, "total_volume": 2_100_000,
+            "institutional_block_buys": 65_000, "institutional_block_sells": 15_000
+        },
+        "TCS": {
+            "bid_depth_qty": 140_000, "ask_depth_qty": 280_000,
+            "buy_volume": 420_000, "sell_volume": 680_000,
+            "cumulative_delta": -260_000, "total_volume": 1_100_000,
+            "institutional_block_buys": 5_000, "institutional_block_sells": 45_000
+        },
+        "INFY": {
+            "bid_depth_qty": 200_000, "ask_depth_qty": 190_000,
+            "buy_volume": 1_620_000, "sell_volume": 1_580_000,
+            "cumulative_delta": 40_000, "total_volume": 3_200_000,
+            "institutional_block_buys": 20_000, "institutional_block_sells": 18_000
+        },
+        "SBIN": {
+            "bid_depth_qty": 550_000, "ask_depth_qty": 320_000,
+            "buy_volume": 2_100_000, "sell_volume": 1_400_000,
+            "cumulative_delta": 700_000, "total_volume": 3_500_000,
+            "institutional_block_buys": 120_000, "institutional_block_sells": 25_000
+        },
+        "HDFCBANK": {
+            "bid_depth_qty": 410_000, "ask_depth_qty": 360_000,
+            "buy_volume": 1_800_000, "sell_volume": 1_500_000,
+            "cumulative_delta": 300_000, "total_volume": 3_300_000,
+            "institutional_block_buys": 80_000, "institutional_block_sells": 30_000
+        },
+        "ICICIBANK": {
+            "bid_depth_qty": 300_000, "ask_depth_qty": 260_000,
+            "buy_volume": 1_400_000, "sell_volume": 1_200_000,
+            "cumulative_delta": 200_000, "total_volume": 2_600_000,
+            "institutional_block_buys": 40_000, "institutional_block_sells": 20_000
+        }
+    }
+
     tech_inputs = {
         "ema20": px * 0.99, "ema50": px * 0.97, "ema200": px * 0.92,
         "adx": 30.0, "rsi14": 62.0, "macd_hist": 2.5,
         "atr14": px * 0.012, "vwap": px * 0.995, "volume_ratio": 1.4,
-        "sector_rs_score": 68.0, "news_sentiment_score": 0.4
+        "sector_rs_score": 68.0, "news_sentiment_score": 0.4,
+        "orderflow": orderflow_profiles.get(symbol, orderflow_profiles["RELIANCE"])
     }
 
     return orch.run_cycle_for_symbol(

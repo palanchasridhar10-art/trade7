@@ -96,6 +96,7 @@ class TradingOrchestrator:
                 atr14=technical_inputs.get("atr14", max(2.0, quote.last_price * 0.01)),
                 vwap=technical_inputs.get("vwap", quote.last_price),
                 volume_ratio=technical_inputs.get("volume_ratio", 1.0),
+                orderflow=technical_inputs.get("orderflow"),
                 portfolio_capital=portfolio.total_capital,
                 now=now
             )
@@ -159,5 +160,15 @@ class TradingOrchestrator:
             "consensus_reached": consensus.consensus_reached,
             "action": action,
             "reason": reason,
-            "order": executed_order.model_dump() if executed_order else None
+            "order": executed_order.model_dump() if executed_order else None,
+            "features": tech_signal.features,
+            "orderflow": {
+                "orderflow_score": tech_signal.features.get("orderflow_score", 0.0),
+                "order_book_imbalance": tech_signal.features.get("order_book_imbalance", 0.0),
+                "cumulative_volume_delta": tech_signal.features.get("cumulative_volume_delta", 0),
+                "delta_ratio": tech_signal.features.get("delta_ratio", 0.0),
+                "institutional_block_bias": tech_signal.features.get("institutional_block_bias", 0.0),
+                "orderflow_regime": tech_signal.features.get("orderflow_regime", "BALANCED")
+            },
+            "tech_rationale": tech_signal.rationale
         }

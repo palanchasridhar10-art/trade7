@@ -53,11 +53,12 @@ agent1:
 
 agent2:
   weights:
-    trend: 0.30
-    momentum: 0.25
-    volume: 0.20
+    trend: 0.25
+    momentum: 0.20
+    volume: 0.15
     structure: 0.15
-    volatility: 0.10
+    volatility: 0.05
+    orderflow: 0.20 # 20% weight to real-time company order flow and tape dynamics
   thresholds:
     long_score: 0.60
     short_score: -0.60

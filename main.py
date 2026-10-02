@@ -81,9 +81,19 @@ def run_demonstration():
                 "ema20": 2880.0, "ema50": 2840.0, "ema200": 2720.0,
                 "adx": 31.5, "rsi14": 62.4, "macd_hist": 4.5,
                 "atr14": 28.0, "vwap": 2905.0, "volume_ratio": 1.45,
-                "sector_rs_score": 72.0, "news_sentiment_score": 0.45
+                "sector_rs_score": 72.0, "news_sentiment_score": 0.45,
+                "orderflow": {
+                    "bid_depth_qty": 350_000,
+                    "ask_depth_qty": 210_000,
+                    "buy_volume": 1_250_000,
+                    "sell_volume": 850_000,
+                    "cumulative_delta": 400_000,
+                    "total_volume": 2_100_000,
+                    "institutional_block_buys": 65_000,
+                    "institutional_block_sells": 15_000
+                }
             },
-            "desc": "Confluence Scenario (High Conviction Long on both Agents)"
+            "desc": "Confluence Scenario (High Conviction Long on both Agents + Bullish Orderflow)"
         },
         {
             "symbol": "TCS",
@@ -98,9 +108,19 @@ def run_demonstration():
                 "ema20": 4200.0, "ema50": 4220.0, "ema200": 4100.0, # Bearish cross
                 "adx": 18.0, "rsi14": 44.0, "macd_hist": -2.1,
                 "atr14": 42.0, "vwap": 4180.0, "volume_ratio": 0.8,
-                "sector_rs_score": 48.0, "news_sentiment_score": 0.1
+                "sector_rs_score": 48.0, "news_sentiment_score": 0.1,
+                "orderflow": {
+                    "bid_depth_qty": 140_000,
+                    "ask_depth_qty": 280_000,
+                    "buy_volume": 420_000,
+                    "sell_volume": 680_000,
+                    "cumulative_delta": -260_000,
+                    "total_volume": 1_100_000,
+                    "institutional_block_buys": 5_000,
+                    "institutional_block_sells": 45_000
+                }
             },
-            "desc": "Divergence Scenario (Fundamental Neutral vs Technical Bearish -> Abstention)"
+            "desc": "Divergence Scenario (Fundamental Neutral vs Technical Bearish + Selling Tape -> Abstention)"
         },
         {
             "symbol": "INFY",
@@ -116,7 +136,17 @@ def run_demonstration():
                 "ema20": 1850.0, "ema50": 1820.0, "ema200": 1700.0,
                 "adx": 34.0, "rsi14": 68.0, "macd_hist": 3.2,
                 "atr14": 22.0, "vwap": 1870.0, "volume_ratio": 1.8,
-                "sector_rs_score": 65.0, "news_sentiment_score": 0.5
+                "sector_rs_score": 65.0, "news_sentiment_score": 0.5,
+                "orderflow": {
+                    "bid_depth_qty": 200_000,
+                    "ask_depth_qty": 190_000,
+                    "buy_volume": 1_620_000,
+                    "sell_volume": 1_580_000,
+                    "cumulative_delta": 40_000,
+                    "total_volume": 3_200_000,
+                    "institutional_block_buys": 20_000,
+                    "institutional_block_sells": 18_000
+                }
             },
             "desc": "Event Risk Scenario (Results in 24h -> Hard Veto)"
         }

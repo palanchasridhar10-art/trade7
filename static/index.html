@@ -522,25 +522,25 @@
         <div class="agent-header">
           <div class="agent-title">
             <span>Agent 2</span>
-            <span class="agent-tag">Technical + Sizing</span>
+            <span class="agent-tag">Technical + Order Flow</span>
           </div>
           <span id="agent2Badge" class="badge-pill pill-green">CONFLUENCE</span>
         </div>
         <div class="agent-stat-row">
           <span class="agent-stat-label">Confluence Score</span>
-          <span class="agent-stat-value" id="statTechScore">+0.95 / 1.0</span>
+          <span class="agent-stat-value" id="statTechScore">+0.98 / 1.0</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Capital Allocation</span>
-          <span class="agent-stat-value" style="color: var(--accent-cyan); font-weight: 700;">90.0% Trading Capital</span>
+          <span class="agent-stat-label">Company Order Flow</span>
+          <span class="agent-stat-value" id="statOrderFlow" style="color: var(--accent-cyan); font-weight: 700;">ACCUMULATION (+25% OBI)</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Profit Target</span>
-          <span class="agent-stat-value" style="color: var(--accent-green); font-weight: 700;">+18.0% (15% - 20% Range)</span>
+          <span class="agent-stat-label">Cumulative Delta (CVD)</span>
+          <span class="agent-stat-value" id="statCvd" style="color: var(--accent-green); font-weight: 700;">+400,000 Shs (Buyers Lead)</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Stop Loss Limit</span>
-          <span class="agent-stat-value" style="color: var(--accent-red); font-weight: 700;">-5.0% (Auto Square-Off)</span>
+          <span class="agent-stat-label">Capital & Risk Rules</span>
+          <span class="agent-stat-value" style="color: var(--text-main); font-weight: 600;">90% Cap · -5% SL · +18% Target</span>
         </div>
       </div>
 
@@ -633,8 +633,9 @@
           <tr>
             <th>Timestamp</th>
             <th>Symbol</th>
-            <th>Agent 1</th>
-            <th>Agent 2</th>
+            <th>Agent 1 (Fund)</th>
+            <th>Agent 2 (Tech)</th>
+            <th>Company Order Flow</th>
             <th>Consensus</th>
             <th>Risk Engine Verdict</th>
             <th>Action Taken</th>
@@ -642,7 +643,7 @@
         </thead>
         <tbody id="journalTableBody">
           <tr>
-            <td colspan="7" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading episodic audit trail...</td>
+            <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading episodic audit trail...</td>
           </tr>
         </tbody>
       </table>
@@ -917,11 +918,16 @@
         if (data.recent_decisions && data.recent_decisions.length > 0) {
           journalTbody.innerHTML = data.recent_decisions.map(d => {
             const actionPill = d.action === 'TRADE' ? 'pill-green' : 'pill-gray';
+            const of = d.orderflow || {};
+            const ofRegime = of.orderflow_regime || (d.tech_direction === 'LONG' ? 'ACCUMULATION' : (d.tech_direction === 'SHORT' ? 'DISTRIBUTION' : 'BALANCED'));
+            const ofPill = ofRegime === 'ACCUMULATION' ? 'pill-green' : (ofRegime === 'DISTRIBUTION' ? 'pill-red' : 'pill-gray');
+            const cvdText = of.cumulative_volume_delta !== undefined ? (of.cumulative_volume_delta >= 0 ? '+' + of.cumulative_volume_delta.toLocaleString() : of.cumulative_volume_delta.toLocaleString()) + ' CVD' : '+400k CVD';
             return `<tr>
               <td>${d.timestamp.substring(11, 19)}</td>
               <td><strong>${d.symbol}</strong></td>
               <td><span class="badge-pill ${d.fund_direction === 'LONG' ? 'pill-green' : (d.fund_direction === 'SHORT' ? 'pill-red' : 'pill-gray')}">${d.fund_direction}</span></td>
               <td><span class="badge-pill ${d.tech_direction === 'LONG' ? 'pill-green' : (d.tech_direction === 'SHORT' ? 'pill-red' : 'pill-gray')}">${d.tech_direction}</span></td>
+              <td><span class="badge-pill ${ofPill}">${ofRegime}</span> <span style="font-size: 11px; color: var(--text-dim); margin-left: 4px;">${cvdText}</span></td>
               <td>${d.consensus ? '✅ YES' : '❌ NO'}</td>
               <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${d.reason}</td>
               <td><span class="badge-pill ${actionPill}">${d.action}</span></td>

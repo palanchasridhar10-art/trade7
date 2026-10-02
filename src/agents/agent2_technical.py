@@ -9,18 +9,20 @@ from typing import Dict, List, Any, Optional
 import math
 from src.core.constants import SignalDirection, TradingHorizon, MarketRegime
 from src.core.models import TechnicalSignal
+from src.data.orderflow import OrderFlowData, OrderFlowAnalysis, compute_orderflow_metrics
 
 class TechnicalAnalystAgent:
-    """Agent 2: Quantitative Technical Confluence & Kelly Position Sizing."""
+    """Agent 2: Quantitative Technical Confluence & Kelly Position Sizing with Order Flow."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         cfg = config or {}
         weights = cfg.get("weights", {})
-        self.w_trend = weights.get("trend", 0.30)
-        self.w_momentum = weights.get("momentum", 0.25)
-        self.w_volume = weights.get("volume", 0.20)
+        self.w_trend = weights.get("trend", 0.25)
+        self.w_momentum = weights.get("momentum", 0.20)
+        self.w_volume = weights.get("volume", 0.15)
         self.w_structure = weights.get("structure", 0.15)
-        self.w_volatility = weights.get("volatility", 0.10)
+        self.w_volatility = weights.get("volatility", 0.05)
+        self.w_orderflow = weights.get("orderflow", 0.20) # 20% weight to Order Flow of company
 
         thresholds = cfg.get("thresholds", {})
         self.long_threshold = thresholds.get("long_score", 0.60)
@@ -101,10 +103,11 @@ class TechnicalAnalystAgent:
         atr14: float,
         vwap: float,
         volume_ratio: float,
+        orderflow: Optional[Dict[str, Any]] = None,
         portfolio_capital: float = 1_000_000.0,
         now: Optional[datetime] = None
     ) -> TechnicalSignal:
-        """Perform technical scoring, dynamic bracket generation, and Kelly sizing."""
+        """Perform technical scoring, dynamic bracket generation, and Kelly sizing with Order Flow."""
         timestamp = now or datetime.now()
         rationale = []
 
@@ -138,13 +141,46 @@ class TechnicalAnalystAgent:
         # 4. Volatility Context Vote
         vol_vote = 0.5 if adx > 25.0 else 0.0
 
-        # Composite Technical Score in range [-1.0, +1.0]
+        # 5. Order Flow Analysis (Company Order Book Depth, CVD & Institutional Tape)
+        orderflow_vote = 0.0
+        of_score = 0.0
+        obi = 0.0
+        cvd = 0
+        delta_ratio = 0.0
+        inst_bias = 0.0
+        of_regime = "BALANCED"
+
+        if orderflow:
+            if isinstance(orderflow, dict):
+                of_data = OrderFlowData(symbol=symbol, **orderflow)
+            else:
+                of_data = orderflow
+            of_analysis = compute_orderflow_metrics(of_data)
+            of_score = of_analysis.orderflow_score
+            orderflow_vote = of_analysis.orderflow_vote
+            obi = of_analysis.order_book_imbalance
+            cvd = of_data.cumulative_delta if of_data.cumulative_delta != 0 else (of_data.buy_volume - of_data.sell_volume)
+            delta_ratio = of_analysis.delta_ratio
+            inst_bias = of_analysis.institutional_bias
+            of_regime = of_analysis.flow_regime
+            rationale.extend(of_analysis.rationale)
+        else:
+            # Fallback estimation based on volume and VWAP positioning
+            obi = 0.15 if current_price > vwap else -0.15
+            delta_ratio = 0.10 if (current_price > vwap and volume_ratio > 1.0) else (-0.10 if current_price < vwap else 0.0)
+            orderflow_vote = 1.0 if (current_price > vwap and volume_ratio > 1.2) else (-1.0 if (current_price < vwap and volume_ratio > 1.2) else 0.0)
+            of_score = round(orderflow_vote * 0.5, 2)
+            of_regime = "ACCUMULATION" if orderflow_vote > 0 else ("DISTRIBUTION" if orderflow_vote < 0 else "BALANCED")
+            rationale.append(f"Estimated Order Flow: Price {'above' if current_price > vwap else 'below'} VWAP with {volume_ratio:.2f}x volume.")
+
+        # Composite Technical & Order Flow Score in range [-1.0, +1.0]
         tech_score = (
             self.w_trend * trend_vote
             + self.w_momentum * momentum_vote
             + self.w_volume * volume_vote
             + self.w_structure * trend_vote
             + self.w_volatility * vol_vote
+            + self.w_orderflow * orderflow_vote
         )
         tech_score = max(-1.0, min(1.0, tech_score))
 
@@ -202,7 +238,13 @@ class TechnicalAnalystAgent:
                 "rsi14": round(rsi14, 2),
                 "atr14": round(atr14, 2),
                 "vwap_diff_pct": round(((current_price - vwap) / vwap) * 100, 2),
-                "regime": self.detect_regime(adx, ema20, ema50, ema200, current_price).value
+                "regime": self.detect_regime(adx, ema20, ema50, ema200, current_price).value,
+                "orderflow_score": of_score,
+                "order_book_imbalance": round(obi, 3),
+                "cumulative_volume_delta": cvd,
+                "delta_ratio": round(delta_ratio, 3),
+                "institutional_block_bias": round(inst_bias, 3),
+                "orderflow_regime": of_regime
             },
             entry=entry,
             stop_loss=stop_loss,
