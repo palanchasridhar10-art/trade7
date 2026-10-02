@@ -447,6 +447,122 @@
     </div>
   </div>
 
+  <!-- Multi-Timeframe Fundamental Intelligence Modal -->
+  <div id="fundModal" class="modal-overlay hidden" style="z-index: 120;">
+    <div class="login-card" style="max-width: 960px; width: 95%; max-height: 90vh; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 16px;">
+        <div>
+          <div class="angel-badge" style="background: rgba(0, 240, 255, 0.12); border-color: rgba(0, 240, 255, 0.3); color: var(--accent-cyan);">
+            Agent 1 Multi-Timeframe Fundamental Intelligence
+          </div>
+          <h2 id="fmSymbolTitle" style="font-size: 22px; color: #fff; margin-top: 4px;">RELIANCE Multi-Timeframe Fundamentals</h2>
+          <p id="fmSectorSubtitle" style="font-size: 13px; color: var(--text-muted);">Energy · Nifty 50 Heavyweight · Daily, Monthly, and Yearly Convergence</p>
+        </div>
+        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="closeFundModal()">✕ Close</button>
+      </div>
+
+      <!-- Composite Summary Banner -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="display:flex; align-items:center; gap: 16px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Composite Score (3 Timeframes)</div>
+            <div id="fmCompositeScore" style="font-size: 26px; font-weight: 800; font-family: var(--font-mono); color: var(--accent-green);">78.0 / 100</div>
+          </div>
+          <div id="fmDirectionBadge" class="badge-pill pill-green" style="font-size: 12px; padding: 6px 14px;">LONG BIAS</div>
+        </div>
+        <div style="display: flex; gap: 16px; font-size: 12px; font-family: var(--font-mono);">
+          <div><span style="color:var(--text-muted);">📅 Daily (30%):</span> <strong id="fmDailySummaryScore" style="color:var(--accent-cyan);">78.0</strong></div>
+          <div><span style="color:var(--text-muted);">🗓️ Monthly (40%):</span> <strong id="fmMonthlySummaryScore" style="color:var(--accent-blue);">76.0</strong></div>
+          <div><span style="color:var(--text-muted);">📈 Yearly (30%):</span> <strong id="fmYearlySummaryScore" style="color:var(--accent-purple);">71.0</strong></div>
+          <div><span style="color:var(--text-muted);">Macro Adj:</span> <strong id="fmMacroAdj" style="color:var(--accent-green);">+2.8</strong></div>
+        </div>
+      </div>
+
+      <!-- 3-Column Timeframe Cards -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px; margin-bottom: 18px;">
+        <!-- DAILY CARD -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+              <span>📅 DAILY HORIZON</span>
+              <span style="font-size: 10px; background: rgba(0,240,255,0.15); padding: 1px 5px; border-radius: 4px;">30% Weight</span>
+            </div>
+            <span id="fmDailyBadge" class="badge-pill pill-green">78.0</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Fast intraday momentum & institutional day flows:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Price Move Today</span><span class="agent-stat-value" id="fmdPct">+1.42%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Volume vs 20-DMA</span><span class="agent-stat-value" id="fmdVol">1.60x (Surge)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">FII Flow Today</span><span class="agent-stat-value" id="fmdFii">+₹180 Cr</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">DII Flow Today</span><span class="agent-stat-value" id="fmdDii">+₹90 Cr</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Delivery %</span><span class="agent-stat-value" id="fmdDelivery">62% (Institutional)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Put/Call Ratio</span><span class="agent-stat-value" id="fmdPcr">0.72 (Bullish)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">News Sentiment</span><span class="agent-stat-value" id="fmdNews">+0.55 (Positive)</span></div>
+          <div style="margin-top: 4px; font-size: 11px; color: var(--text-muted);">
+            <strong>Daily Drivers:</strong>
+            <ul id="fmdReasonsList" style="margin-left: 16px; margin-top: 4px; color: var(--text-main); font-size: 11px;"></ul>
+          </div>
+        </div>
+
+        <!-- MONTHLY CARD -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-blue); display: flex; align-items: center; gap: 6px;">
+              <span>🗓️ MONTHLY HORIZON</span>
+              <span style="font-size: 10px; background: rgba(59,130,246,0.15); padding: 1px 5px; border-radius: 4px;">40% Weight</span>
+            </div>
+            <span id="fmMonthlyBadge" class="badge-pill pill-green">76.0</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Quarterly earnings cycle, sector rotation & 1-month flows:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">QoQ Revenue Growth</span><span class="agent-stat-value" id="fmmRev">+8.5%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">QoQ PAT Growth</span><span class="agent-stat-value" id="fmmPat">+12.0%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">EPS Trend (3-Quarter)</span><span class="agent-stat-value" id="fmmEps">Expanding (Up)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">FII 1-Month Net Flow</span><span class="agent-stat-value" id="fmmFii1m">+₹1,800 Cr</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Sector Rotation Score</span><span class="agent-stat-value" id="fmmSector">72 / 100</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Analyst Upgrades</span><span class="agent-stat-value" id="fmmAnalyst">+4 Up / 1 Down</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Management Guidance</span><span class="agent-stat-value" id="fmmGuidance">Positive</span></div>
+          <div style="margin-top: 4px; font-size: 11px; color: var(--text-muted);">
+            <strong>Monthly Drivers:</strong>
+            <ul id="fmmReasonsList" style="margin-left: 16px; margin-top: 4px; color: var(--text-main); font-size: 11px;"></ul>
+          </div>
+        </div>
+
+        <!-- YEARLY CARD -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-purple); display: flex; align-items: center; gap: 6px;">
+              <span>📈 YEARLY HORIZON</span>
+              <span style="font-size: 10px; background: rgba(139,92,246,0.15); padding: 1px 5px; border-radius: 4px;">30% Weight</span>
+            </div>
+            <span id="fmYearlyBadge" class="badge-pill pill-green">71.0</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Structural quality, 3Y CAGRs, balance sheet & ESG:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">3-Year Revenue CAGR</span><span class="agent-stat-value" id="fmyRev">+12.5%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">3-Year PAT CAGR</span><span class="agent-stat-value" id="fmyPat">+14.2%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">3-Year EPS CAGR</span><span class="agent-stat-value" id="fmyEps">+13.8%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">3-Year Average ROE</span><span class="agent-stat-value" id="fmyRoe">9.5%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Debt Reduction %</span><span class="agent-stat-value" id="fmyDebt">Stable (-5%)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Free Cash Flow Yield</span><span class="agent-stat-value" id="fmyFcf">2.1%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">ESG & Governance</span><span class="agent-stat-value" id="fmyEsg">62 / 100</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Market Share Trend</span><span class="agent-stat-value" id="fmyShare">Gaining Structurally</span></div>
+          <div style="margin-top: 4px; font-size: 11px; color: var(--text-muted);">
+            <strong>Yearly Drivers:</strong>
+            <ul id="fmyReasonsList" style="margin-left: 16px; margin-top: 4px; color: var(--text-main); font-size: 11px;"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Inside Modal -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">
+          Integrated with 3-Agent Consensus Engine · Daily (30%) + Monthly (40%) + Yearly (30%)
+        </span>
+        <button class="btn btn-primary" id="btnModalRunCycle" onclick="triggerCycleForModalSymbol()">
+          ⚡ Run Autonomous Cycle on This Stock
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Header -->
   <header>
     <div class="brand">
@@ -524,30 +640,58 @@
     </div>
 
     <div class="agents-grid">
-      <!-- Agent 1 -->
+      <!-- Agent 1: Multi-Timeframe Fundamental Analyst -->
       <div class="agent-card">
         <div class="agent-header">
           <div class="agent-title">
             <span>Agent 1</span>
-            <span class="agent-tag">Fundamental</span>
+            <span class="agent-tag">Multi-Timeframe Fund</span>
           </div>
-          <span id="agent1Badge" class="badge-pill pill-green">BULLISH</span>
+          <span id="agent1Badge" class="badge-pill pill-green">BULLISH · 78.0</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Market Regime (1W/1M)</span>
-          <span class="agent-stat-value" id="statRegime">68.5 / 100</span>
+          <span class="agent-stat-label">Active Symbol</span>
+          <span class="agent-stat-value" id="statFundSymbol" style="color: var(--accent-cyan); font-weight:700;">RELIANCE</span>
         </div>
-        <div class="agent-stat-row">
-          <span class="agent-stat-label">India VIX Level</span>
-          <span class="agent-stat-value" id="statVix">13.40 (Low Vol)</span>
+        <!-- Daily Layer (30%) -->
+        <div class="agent-stat-row" style="background: rgba(0,240,255,0.04); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-cyan);">
+          <div>
+            <div style="font-weight: 600; color: #fff; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>📅 Daily Basis (30%)</span>
+              <span id="statFundDailyBias" class="badge-pill pill-green" style="font-size: 9px; padding: 1px 5px;">BULLISH</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;" id="statFundDailyDrivers">Flows +₹270Cr · Vol 1.6x · Deliv 62% · PCR 0.72</div>
+          </div>
+          <span class="agent-stat-value" id="statFundDailyScore" style="color: var(--accent-cyan); font-size: 14px; font-weight: 700;">78 / 100</span>
         </div>
-        <div class="agent-stat-row">
-          <span class="agent-stat-label">FII / DII 5-Day Net</span>
-          <span class="agent-stat-value" style="color: var(--accent-green);">+₹7,700 Cr</span>
+        <!-- Monthly Layer (40%) -->
+        <div class="agent-stat-row" style="background: rgba(59,130,246,0.04); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-blue);">
+          <div>
+            <div style="font-weight: 600; color: #fff; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🗓️ Monthly Basis (40%)</span>
+              <span id="statFundMonthlyBias" class="badge-pill pill-green" style="font-size: 9px; padding: 1px 5px;">BULLISH</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;" id="statFundMonthlyDrivers">QoQ PAT +12% · EPS Up · FII ₹1,800Cr · Sector 72</div>
+          </div>
+          <span class="agent-stat-value" id="statFundMonthlyScore" style="color: var(--accent-blue); font-size: 14px; font-weight: 700;">76 / 100</span>
         </div>
-        <div class="agent-stat-row">
-          <span class="agent-stat-label">Event Risk Filter</span>
-          <span class="agent-stat-value" style="color: var(--accent-green);">PASSED (Clear)</span>
+        <!-- Yearly Layer (30%) -->
+        <div class="agent-stat-row" style="background: rgba(139,92,246,0.04); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-purple);">
+          <div>
+            <div style="font-weight: 600; color: #fff; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>📈 Yearly Basis (30%)</span>
+              <span id="statFundYearlyBias" class="badge-pill pill-green" style="font-size: 9px; padding: 1px 5px;">BULLISH</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;" id="statFundYearlyDrivers">3Y PAT CAGR 14.2% · ROE 9.5% · FCF 2.1% · ESG 62</div>
+          </div>
+          <span class="agent-stat-value" id="statFundYearlyScore" style="color: var(--accent-purple); font-size: 14px; font-weight: 700;">71 / 100</span>
+        </div>
+        <!-- Macro & Modal Button -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:4px;">
+          <span style="font-size: 11px; color: var(--text-dim);" id="statFundMacro">Macro Overlay: VIX 13.4 (+2.8 pts)</span>
+          <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="openFundModalCurrent()">
+            🔍 Full Breakdown
+          </button>
         </div>
       </div>
 
@@ -711,17 +855,19 @@
             <th>Symbol</th>
             <th>Sector</th>
             <th>Price (₹)</th>
-            <th>Fund Signal</th>
+            <th>📅 Daily (30%)</th>
+            <th>🗓️ Monthly (40%)</th>
+            <th>📈 Yearly (30%)</th>
+            <th>Composite Fund</th>
             <th>Tech Signal</th>
             <th>Gate</th>
             <th>Win Prob</th>
-            <th>Consensus</th>
             <th>Action</th>
-            <th>Reason</th>
+            <th>Fundamental Intel</th>
           </tr>
         </thead>
         <tbody id="universeTableBody">
-          <tr><td colspan="10" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
+          <tr><td colspan="12" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1183,34 +1329,215 @@
       document.getElementById('universeCount').textContent = companies.length + ' companies scanned';
 
       tbody.innerHTML = sorted.map(c => {
-        const isTraded  = c.action === 'TRADE';
-        const fundPill  = c.fund_direction === 'LONG' ? 'pill-green' : (c.fund_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
-        const techPill  = c.tech_direction === 'LONG' ? 'pill-green' : (c.tech_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
-        const actPill   = isTraded ? 'pill-green' : 'pill-gray';
-        const gateIcon  = c.gate_passed ? '<span style="color:var(--accent-green);">PASS</span>' : '<span style="color:var(--text-dim);">FAIL</span>';
-        const winPct    = c.win_prob ? (c.win_prob * 100).toFixed(1) + '%' : '--';
-        const winColor  = c.win_prob >= 0.68 ? 'var(--accent-green)' : (c.win_prob >= 0.55 ? 'var(--accent-yellow)' : 'var(--text-dim)');
-        const shortR    = (c.reason || '').substring(0, 55) + ((c.reason || '').length > 55 ? '...' : '');
-        const rowBg     = isTraded ? 'background:rgba(16,185,129,0.07);' : '';
-        const px        = c.price ? '\u20b9' + c.price.toLocaleString('en-IN') : '--';
+        const isTraded    = c.action === 'TRADE';
+        const fundPill    = c.fund_direction === 'LONG' ? 'pill-green' : (c.fund_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
+        const techPill    = c.tech_direction === 'LONG' ? 'pill-green' : (c.tech_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
+        const actPill     = isTraded ? 'pill-green' : 'pill-gray';
+        const gateIcon    = c.gate_passed ? '<span style="color:var(--accent-green); font-weight:700;">PASS</span>' : '<span style="color:var(--text-dim);">FAIL</span>';
+        const winPct      = c.win_prob ? (c.win_prob * 100).toFixed(1) + '%' : '--';
+        const winColor    = c.win_prob >= 0.68 ? 'var(--accent-green)' : (c.win_prob >= 0.55 ? 'var(--accent-yellow)' : 'var(--text-dim)');
+        const rowBg       = isTraded ? 'background:rgba(16,185,129,0.07);' : '';
+        const px          = c.price ? '₹' + c.price.toLocaleString('en-IN') : '--';
+
+        const dailySc     = c.fund_daily_score !== undefined ? c.fund_daily_score.toFixed(0) : '50';
+        const monthlySc   = c.fund_monthly_score !== undefined ? c.fund_monthly_score.toFixed(0) : '50';
+        const yearlySc    = c.fund_yearly_score !== undefined ? c.fund_yearly_score.toFixed(0) : '50';
+        const compSc      = c.fund_score !== undefined ? c.fund_score.toFixed(1) : '50.0';
+
+        const dailyColor   = c.fund_daily_score >= 60 ? 'var(--accent-cyan)' : (c.fund_daily_score <= 40 ? 'var(--accent-red)' : 'var(--text-muted)');
+        const monthlyColor = c.fund_monthly_score >= 60 ? 'var(--accent-blue)' : (c.fund_monthly_score <= 40 ? 'var(--accent-red)' : 'var(--text-muted)');
+        const yearlyColor  = c.fund_yearly_score >= 60 ? 'var(--accent-purple)' : (c.fund_yearly_score <= 40 ? 'var(--accent-red)' : 'var(--text-muted)');
+
         return `<tr style="${rowBg}">
           <td><strong style="color:${isTraded ? 'var(--accent-green)' : 'var(--text-main)'}">${c.symbol}</strong></td>
           <td style="font-size:11px; color:var(--text-muted);">${c.sector}</td>
           <td style="font-family:var(--font-mono); font-size:12px;">${px}</td>
-          <td><span class="badge-pill ${fundPill}">${c.fund_direction}</span></td>
+          <td><strong style="color:${dailyColor}; font-family:var(--font-mono);">${dailySc}</strong> <span style="font-size:10px; color:var(--text-dim);">/100</span></td>
+          <td><strong style="color:${monthlyColor}; font-family:var(--font-mono);">${monthlySc}</strong> <span style="font-size:10px; color:var(--text-dim);">/100</span></td>
+          <td><strong style="color:${yearlyColor}; font-family:var(--font-mono);">${yearlySc}</strong> <span style="font-size:10px; color:var(--text-dim);">/100</span></td>
+          <td><span class="badge-pill ${fundPill}">${c.fund_direction} (${compSc})</span></td>
           <td><span class="badge-pill ${techPill}">${c.tech_direction}</span></td>
           <td>${gateIcon}</td>
           <td style="color:${winColor}; font-weight:700; font-family:var(--font-mono);">${winPct}</td>
-          <td>${c.consensus ? '<span style="color:var(--accent-green);">YES</span>' : '<span style="color:var(--text-dim);">NO</span>'}</td>
           <td><span class="badge-pill ${actPill}">${c.action}</span></td>
-          <td style="font-size:11px; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${shortR}</td>
+          <td>
+            <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11px;" onclick="openFundModal('${c.symbol}')">
+              🔍 View Intel
+            </button>
+          </td>
         </tr>`;
       }).join('');
     }
 
+    // Multi-Timeframe Fundamental Modal logic
+    let currentModalSymbol = 'RELIANCE';
+
+    function openFundModalCurrent() {
+      const sym = document.getElementById('statFundSymbol').textContent.trim() || document.getElementById('symbolSelect').value || 'RELIANCE';
+      openFundModal(sym);
+    }
+
+    async function openFundModal(symbol) {
+      currentModalSymbol = symbol;
+      try {
+        const res = await fetch(`/api/fundamentals?symbol=${symbol}`);
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        document.getElementById('fmSymbolTitle').textContent = `${data.symbol} Multi-Timeframe Fundamentals`;
+        document.getElementById('fmSectorSubtitle').textContent = `Nifty 50 Member · Daily (30%) + Monthly (40%) + Yearly (30%) Convergence`;
+
+        const compScoreEl = document.getElementById('fmCompositeScore');
+        compScoreEl.textContent = `${data.composite_score.toFixed(1)} / 100`;
+        const isBullish = data.direction === 'LONG';
+        const isBearish = data.direction === 'SHORT';
+        compScoreEl.style.color = isBullish ? 'var(--accent-green)' : (isBearish ? 'var(--accent-red)' : 'var(--text-muted)');
+
+        const dirBadge = document.getElementById('fmDirectionBadge');
+        dirBadge.className = `badge-pill ${isBullish ? 'pill-green' : (isBearish ? 'pill-red' : 'pill-gray')}`;
+        dirBadge.textContent = `${data.direction} BIAS (Confidence: ${(data.confidence * 100).toFixed(0)}%)`;
+
+        document.getElementById('fmDailySummaryScore').textContent = data.daily.score.toFixed(1);
+        document.getElementById('fmMonthlySummaryScore').textContent = data.monthly.score.toFixed(1);
+        document.getElementById('fmYearlySummaryScore').textContent = data.yearly.score.toFixed(1);
+        const adj = (data.macro && data.macro.regime_adjustment !== undefined) ? data.macro.regime_adjustment : 0;
+        document.getElementById('fmMacroAdj').textContent = (adj >= 0 ? '+' : '') + adj.toFixed(1) + ' pts';
+
+        // Daily Card
+        const d = data.daily.metrics || {};
+        const dScore = data.daily.score;
+        const dBadge = document.getElementById('fmDailyBadge');
+        dBadge.textContent = `${dScore.toFixed(1)} (${data.daily.bias})`;
+        dBadge.className = `badge-pill ${data.daily.bias === 'BULLISH' ? 'pill-green' : (data.daily.bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+
+        document.getElementById('fmdPct').textContent = (d.pct_change !== undefined ? (d.pct_change >= 0 ? '+' : '') + d.pct_change.toFixed(2) + '%' : '--');
+        document.getElementById('fmdVol').textContent = (d.vol_ratio !== undefined ? `${d.vol_ratio.toFixed(2)}x (${d.vol_ratio >= 1.5 ? 'Surge' : 'Normal'})` : '--');
+        document.getElementById('fmdFii').textContent = (d.fii_net_cr !== undefined ? (d.fii_net_cr >= 0 ? '+₹' : '-₹') + Math.abs(d.fii_net_cr).toFixed(0) + ' Cr' : '--');
+        document.getElementById('fmdDii').textContent = (d.dii_net_cr !== undefined ? (d.dii_net_cr >= 0 ? '+₹' : '-₹') + Math.abs(d.dii_net_cr).toFixed(0) + ' Cr' : '--');
+        document.getElementById('fmdDelivery').textContent = (d.delivery_pct !== undefined ? `${d.delivery_pct.toFixed(0)}% (${d.delivery_pct >= 60 ? 'Institutional' : 'Normal'})` : '--');
+        document.getElementById('fmdPcr').textContent = (d.put_call_ratio !== undefined ? `${d.put_call_ratio.toFixed(2)} (${d.put_call_ratio <= 0.8 ? 'Bullish' : (d.put_call_ratio >= 1.1 ? 'Bearish' : 'Neutral')})` : '--');
+        document.getElementById('fmdNews').textContent = (d.news_sentiment !== undefined ? `${d.news_sentiment >= 0 ? '+' : ''}${d.news_sentiment.toFixed(2)} (${d.news_sentiment > 0.2 ? 'Positive' : (d.news_sentiment < -0.2 ? 'Negative' : 'Neutral')})` : '--');
+
+        const dList = document.getElementById('fmdReasonsList');
+        dList.innerHTML = (data.daily.reasons && data.daily.reasons.length > 0)
+          ? data.daily.reasons.map(r => `<li>${r}</li>`).join('')
+          : '<li>Standard intraday movement</li>';
+
+        // Monthly Card
+        const m = data.monthly.metrics || {};
+        const mScore = data.monthly.score;
+        const mBadge = document.getElementById('fmMonthlyBadge');
+        mBadge.textContent = `${mScore.toFixed(1)} (${data.monthly.bias})`;
+        mBadge.className = `badge-pill ${data.monthly.bias === 'BULLISH' ? 'pill-green' : (data.monthly.bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+
+        document.getElementById('fmmRev').textContent = (m.q_rev_growth !== undefined ? `+${m.q_rev_growth.toFixed(1)}% QoQ` : '--');
+        document.getElementById('fmmPat').textContent = (m.q_pat_growth !== undefined ? `+${m.q_pat_growth.toFixed(1)}% QoQ` : '--');
+        document.getElementById('fmmEps').textContent = (m.eps_trend === 'up' ? 'Expanding (3 Quarters Up)' : (m.eps_trend === 'down' ? 'Deteriorating (Down)' : 'Flat / Stable'));
+        document.getElementById('fmmFii1m').textContent = (m.fii_1m_cr !== undefined ? (m.fii_1m_cr >= 0 ? '+₹' : '-₹') + Math.abs(m.fii_1m_cr).toLocaleString('en-IN') + ' Cr' : '--');
+        document.getElementById('fmmSector').textContent = (m.sector_rotation !== undefined ? `${m.sector_rotation} / 100 (${m.sector_rotation >= 65 ? 'Leading Sector' : 'Lagging Sector'})` : '--');
+        document.getElementById('fmmAnalyst').textContent = (m.analyst_upgrades !== undefined ? `+${m.analyst_upgrades} Up / ${m.analyst_downgrades || 0} Down` : '--');
+        document.getElementById('fmmGuidance').textContent = (m.mgmt_guidance ? m.mgmt_guidance.toUpperCase() : 'NEUTRAL');
+
+        const mList = document.getElementById('fmmReasonsList');
+        mList.innerHTML = (data.monthly.reasons && data.monthly.reasons.length > 0)
+          ? data.monthly.reasons.map(r => `<li>${r}</li>`).join('')
+          : '<li>Solid monthly operational cadence</li>';
+
+        // Yearly Card
+        const y = data.yearly.metrics || {};
+        const yScore = data.yearly.score;
+        const yBadge = document.getElementById('fmYearlyBadge');
+        yBadge.textContent = `${yScore.toFixed(1)} (${data.yearly.bias})`;
+        yBadge.className = `badge-pill ${data.yearly.bias === 'BULLISH' ? 'pill-green' : (data.yearly.bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+
+        document.getElementById('fmyRev').textContent = (y.rev_cagr_3y !== undefined ? `+${y.rev_cagr_3y.toFixed(1)}% CAGR` : '--');
+        document.getElementById('fmyPat').textContent = (y.pat_cagr_3y !== undefined ? `+${y.pat_cagr_3y.toFixed(1)}% CAGR` : '--');
+        document.getElementById('fmyEps').textContent = (y.eps_cagr_3y !== undefined ? `+${y.eps_cagr_3y.toFixed(1)}% CAGR` : '--');
+        document.getElementById('fmyRoe').textContent = (y.roe_avg_3y !== undefined ? `${y.roe_avg_3y.toFixed(1)}% (3Y Avg)` : '--');
+        document.getElementById('fmyDebt').textContent = (y.debt_reduction_pct !== undefined ? (y.debt_reduction_pct >= 0 ? `Reduced ${y.debt_reduction_pct.toFixed(0)}%` : `Increased ${Math.abs(y.debt_reduction_pct).toFixed(0)}%`) : '--');
+        document.getElementById('fmyFcf').textContent = (y.fcf_yield !== undefined ? `${y.fcf_yield.toFixed(1)}%` : '--');
+        document.getElementById('fmyEsg').textContent = (y.esg_score !== undefined ? `${y.esg_score} / 100 (${y.esg_score >= 70 ? 'High' : 'Moderate'})` : '--');
+        document.getElementById('fmyShare').textContent = (y.market_share === 'gaining' ? 'Gaining Structurally' : (y.market_share === 'losing' ? 'Losing Ground' : 'Stable Market Share'));
+
+        const yList = document.getElementById('fmyReasonsList');
+        yList.innerHTML = (data.yearly.reasons && data.yearly.reasons.length > 0)
+          ? data.yearly.reasons.map(r => `<li>${r}</li>`).join('')
+          : '<li>Resilient multi-year fundamentals</li>';
+
+        document.getElementById('btnModalRunCycle').textContent = `⚡ Run Autonomous Cycle on ${symbol}`;
+        document.getElementById('fundModal').classList.remove('hidden');
+
+      } catch (err) {
+        console.error('Error fetching fundamentals:', err);
+        alert('Failed to load multi-timeframe fundamentals: ' + err.message);
+      }
+    }
+
+    function closeFundModal() {
+      document.getElementById('fundModal').classList.add('hidden');
+    }
+
+    function triggerCycleForModalSymbol() {
+      closeFundModal();
+      document.getElementById('symbolSelect').value = currentModalSymbol;
+      updateAgent1CardForSymbol(currentModalSymbol);
+      triggerDecisionCycle();
+    }
+
+    async function updateAgent1CardForSymbol(symbol) {
+      document.getElementById('statFundSymbol').textContent = symbol;
+      try {
+        const res = await fetch(`/api/fundamentals?symbol=${symbol}`);
+        const data = await res.json();
+        if (data.error) return;
+
+        const isBullish = data.direction === 'LONG';
+        const isBearish = data.direction === 'SHORT';
+        const badge = document.getElementById('agent1Badge');
+        badge.className = `badge-pill ${isBullish ? 'pill-green' : (isBearish ? 'pill-red' : 'pill-gray')}`;
+        badge.textContent = `${data.direction} · ${data.composite_score.toFixed(1)}`;
+
+        // Daily
+        document.getElementById('statFundDailyScore').textContent = `${data.daily.score.toFixed(0)} / 100`;
+        const dBias = document.getElementById('statFundDailyBias');
+        dBias.className = `badge-pill ${data.daily.bias === 'BULLISH' ? 'pill-green' : (data.daily.bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+        dBias.textContent = data.daily.bias;
+        const d = data.daily.metrics || {};
+        document.getElementById('statFundDailyDrivers').textContent =
+          `Move ${(d.pct_change >= 0 ? '+' : '')}${d.pct_change || 0}% · Vol ${d.vol_ratio || 1}x · Deliv ${d.delivery_pct || 50}% · PCR ${d.put_call_ratio || 1}`;
+
+        // Monthly
+        document.getElementById('statFundMonthlyScore').textContent = `${data.monthly.score.toFixed(0)} / 100`;
+        const mBias = document.getElementById('statFundMonthlyBias');
+        mBias.className = `badge-pill ${data.monthly.bias === 'BULLISH' ? 'pill-green' : (data.monthly.bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+        mBias.textContent = data.monthly.bias;
+        const m = data.monthly.metrics || {};
+        document.getElementById('statFundMonthlyDrivers').textContent =
+          `PAT +${m.q_pat_growth || 0}% · EPS ${m.eps_trend || 'flat'} · FII ₹${(m.fii_1m_cr || 0).toLocaleString()}Cr · Sector ${m.sector_rotation || 50}`;
+
+        // Yearly
+        document.getElementById('statFundYearlyScore').textContent = `${data.yearly.score.toFixed(0)} / 100`;
+        const yBias = document.getElementById('statFundYearlyBias');
+        yBias.className = `badge-pill ${data.yearly.bias === 'BULLISH' ? 'pill-green' : (data.yearly.bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+        yBias.textContent = data.yearly.bias;
+        const y = data.yearly.metrics || {};
+        document.getElementById('statFundYearlyDrivers').textContent =
+          `3Y PAT ${y.pat_cagr_3y || 0}% · ROE ${y.roe_avg_3y || 0}% · FCF ${y.fcf_yield || 0}% · ESG ${y.esg_score || 60}`;
+
+        const adj = data.macro ? data.macro.regime_adjustment : 0;
+        document.getElementById('statFundMacro').textContent =
+          `Macro Overlay: VIX ${data.macro ? data.macro.india_vix : 13.4} (${adj >= 0 ? '+' : ''}${adj.toFixed(1)} pts)`;
+
+      } catch (err) {
+        console.error('Error updating Agent 1 card:', err);
+      }
+    }
+
     // Fetch full analysis on demand (called every 60s after connect)
     async function fetchFullAnalysis() {
-      if (!isConnected) return;
       try {
         const res = await fetch('/api/analysis');
         const data = await res.json();
@@ -1228,6 +1555,12 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadSavedCredentials();
       updateDashboard();
+      fetchFullAnalysis();
+      const sel = document.getElementById('symbolSelect');
+      if (sel) {
+        sel.addEventListener('change', (e) => updateAgent1CardForSymbol(e.target.value));
+        updateAgent1CardForSymbol(sel.value || 'RELIANCE');
+      }
       setInterval(updateDashboard, 5000);
       setInterval(fetchFullAnalysis, 60000);  // Refresh full analysis every 60s
     });

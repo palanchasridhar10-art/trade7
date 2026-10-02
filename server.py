@@ -65,6 +65,60 @@ analysis_summary = {}      # Latest per-company analysis snapshot for dashboard
 AUTO_WATCHLIST = list(NIFTY50_UNIVERSE.keys())  # 50 stocks
 AUTO_SCAN_INTERVAL_SECONDS = 60   # Scan every 60 seconds
 
+def populate_initial_analysis():
+    """Pre-computes multi-timeframe fundamental analysis (daily, monthly, yearly) and technical status for all 50 stocks."""
+    global analysis_summary
+    for symbol in AUTO_WATCHLIST:
+        cdata = NIFTY50_UNIVERSE.get(symbol, {})
+        breakdown = agent1.get_multi_timeframe_breakdown(symbol)
+        fund_dir = breakdown["direction"]
+        fund_score = breakdown["composite_score"]
+        daily_score = breakdown["daily"]["score"]
+        monthly_score = breakdown["monthly"]["score"]
+        yearly_score = breakdown["yearly"]["score"]
+
+        tp = TECHNICAL_PROFILES.get(symbol, {})
+        tech_dir = tp.get("direction", "NEUTRAL")
+        win_p = 0.975 if (tp.get("adx", 0) >= 28 and tp.get("rsi14", 50) > 55) else 0.50
+        gate_passed = (win_p >= 0.68 and fund_dir == "LONG")
+
+        analysis_summary[symbol] = {
+            "symbol":             symbol,
+            "sector":             cdata.get("sector", "EQUITY"),
+            "price":              cdata.get("price", 0),
+            "fund_direction":     fund_dir,
+            "fund_confidence":    breakdown["confidence"],
+            "fund_score":         fund_score,
+            "fund_daily_score":   daily_score,
+            "fund_monthly_score": monthly_score,
+            "fund_yearly_score":  yearly_score,
+            "fund_rationale":     breakdown["daily"]["reasons"][:1] + breakdown["monthly"]["reasons"][:1] + breakdown["yearly"]["reasons"][:1],
+            "fund_features": {
+                "daily_score":   daily_score,
+                "monthly_score": monthly_score,
+                "yearly_score":  yearly_score,
+                "fund_score":    fund_score
+            },
+            "fund_breakdown":     breakdown,
+            "tech_direction":     tech_dir,
+            "action":             "TRADE" if (gate_passed and win_p >= 0.90) else "NO_TRADE",
+            "gate_passed":        gate_passed,
+            "win_prob":           round(win_p, 4),
+            "consensus":          gate_passed,
+            "reason":             f"Multi-Timeframe Fund: Daily {daily_score} | Monthly {monthly_score} | Yearly {yearly_score} (Composite: {fund_score})",
+            "orderflow":          ORDER_FLOW_PROFILES.get(symbol, {}),
+            "features":           {"gate_passed": gate_passed},
+            "order":              None,
+            "scanned_at":         datetime.now().isoformat(),
+            "scan_no":            0
+        }
+
+# Pre-populate analysis summary on startup
+try:
+    populate_initial_analysis()
+except Exception as e:
+    logger.error(f"Error populating initial analysis: {e}")
+
 def init_orchestrator(broker_instance):
     return TradingOrchestrator(
         agent1=agent1,
@@ -115,36 +169,43 @@ def auto_trading_loop():
                 tech_dir    = result.get("tech_direction", "NEUTRAL")
                 fund_dir    = result.get("fund_direction", "NEUTRAL")
 
-                # Update per-company analysis snapshot for dashboard
+                # Update per-company analysis snapshot for dashboard with multi-timeframe fundamentals
                 cdata = NIFTY50_UNIVERSE.get(symbol, {})
                 analysis_summary[symbol] = {
-                    "symbol":         symbol,
-                    "sector":         cdata.get("sector", "EQUITY"),
-                    "price":          cdata.get("price", 0),
-                    "fund_direction": fund_dir,
-                    "tech_direction": tech_dir,
-                    "action":         action,
-                    "gate_passed":    gate_passed,
-                    "win_prob":       round(win_prob, 4),
-                    "consensus":      result.get("consensus_reached", False),
-                    "reason":         reason,
-                    "orderflow":      result.get("orderflow", {}),
-                    "features":       result.get("features", {}),
-                    "order":          order,
-                    "scanned_at":     datetime.now().isoformat(),
-                    "scan_no":        scan_count,
+                    "symbol":             symbol,
+                    "sector":             cdata.get("sector", "EQUITY"),
+                    "price":              cdata.get("price", 0),
+                    "fund_direction":     fund_dir,
+                    "fund_confidence":    result.get("fund_confidence", 0.0),
+                    "fund_score":         result.get("fund_score", 50.0),
+                    "fund_daily_score":   result.get("fund_daily_score", 50.0),
+                    "fund_monthly_score": result.get("fund_monthly_score", 50.0),
+                    "fund_yearly_score":  result.get("fund_yearly_score", 50.0),
+                    "fund_rationale":     result.get("fund_rationale", []),
+                    "fund_features":      result.get("fund_features", {}),
+                    "tech_direction":     tech_dir,
+                    "action":             action,
+                    "gate_passed":        gate_passed,
+                    "win_prob":           round(win_prob, 4),
+                    "consensus":          result.get("consensus_reached", False),
+                    "reason":             reason,
+                    "orderflow":          result.get("orderflow", {}),
+                    "features":           result.get("features", {}),
+                    "order":              order,
+                    "scanned_at":         datetime.now().isoformat(),
+                    "scan_no":            scan_count,
                 }
 
                 event = {
-                    "scan":      scan_count,
-                    "timestamp": datetime.now().isoformat(),
-                    "symbol":    symbol,
-                    "sector":    cdata.get("sector", "EQUITY"),
-                    "action":    action,
-                    "reason":    reason,
+                    "scan":        scan_count,
+                    "timestamp":   datetime.now().isoformat(),
+                    "symbol":      symbol,
+                    "sector":      cdata.get("sector", "EQUITY"),
+                    "action":      action,
+                    "reason":      reason,
                     "gate_passed": gate_passed,
-                    "win_prob":  win_prob,
-                    "order":     order
+                    "win_prob":    win_prob,
+                    "order":       order
                 }
                 auto_trade_log.append(event)
 
@@ -153,15 +214,19 @@ def auto_trading_loop():
                     auto_trade_log = auto_trade_log[-200:]
 
                 recent_decisions.append({
-                    "timestamp":      datetime.now().isoformat(),
-                    "symbol":         symbol,
-                    "fund_direction": fund_dir,
-                    "tech_direction": tech_dir,
-                    "consensus":      result.get("consensus_reached", False),
-                    "action":         action,
-                    "reason":         reason,
-                    "auto":           True,
-                    "orderflow":      result.get("orderflow", {})
+                    "timestamp":          datetime.now().isoformat(),
+                    "symbol":             symbol,
+                    "fund_direction":     fund_dir,
+                    "fund_score":         result.get("fund_score", 50.0),
+                    "fund_daily_score":   result.get("fund_daily_score", 50.0),
+                    "fund_monthly_score": result.get("fund_monthly_score", 50.0),
+                    "fund_yearly_score":  result.get("fund_yearly_score", 50.0),
+                    "tech_direction":     tech_dir,
+                    "consensus":          result.get("consensus_reached", False),
+                    "action":             action,
+                    "reason":             reason,
+                    "auto":               True,
+                    "orderflow":          result.get("orderflow", {})
                 })
 
                 if len(recent_decisions) > 100:
@@ -284,6 +349,38 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "analysis_summary": analysis_summary
             })
 
+        elif self.path.startswith("/api/fundamentals"):
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            sym = params.get("symbol", [None])[0]
+
+            if sym:
+                sym_clean = sym.upper().strip()
+                if sym_clean in NIFTY50_UNIVERSE:
+                    breakdown = agent1.get_multi_timeframe_breakdown(sym_clean)
+                    self._send_json(200, breakdown)
+                else:
+                    self._send_json(404, {"error": f"Symbol {sym_clean} not found in Nifty 50 universe"})
+            else:
+                all_breakdowns = {
+                    s: agent1.get_multi_timeframe_breakdown(s) for s in AUTO_WATCHLIST
+                }
+                self._send_json(200, {
+                    "total": len(all_breakdowns),
+                    "symbols": all_breakdowns
+                })
+
+        elif self.path == "/api/analysis":
+            self._send_json(200, {
+                "status": "ok",
+                "total": len(analysis_summary),
+                "companies": list(analysis_summary.values()),
+                "trades_placed": sum(1 for v in analysis_summary.values() if v.get("action") == "TRADE"),
+                "gate_passed_count": sum(1 for v in analysis_summary.values() if v.get("gate_passed")),
+                "scanned_at": datetime.now().isoformat()
+            })
+
         else:
             self._send_json(404, {"error": "Not Found"})
 
@@ -391,17 +488,68 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
 
             # Run cycle with live / mock feed data
             result = run_symbol_cycle(symbol, orchestrator)
+            fund_breakdown = agent1.get_multi_timeframe_breakdown(symbol)
+            result["fund_breakdown"] = fund_breakdown
+
+            # Update analysis_summary for dashboard
+            cdata = NIFTY50_UNIVERSE.get(symbol, {})
+            gate_passed = result.get("features", {}).get("gate_passed", False)
+            win_prob = result.get("tech_confidence", 0)
+            action = result.get("action", "NO_TRADE")
+            daily_sc = result.get("fund_daily_score", 50.0)
+            monthly_sc = result.get("fund_monthly_score", 50.0)
+            yearly_sc = result.get("fund_yearly_score", 50.0)
+            fund_sc = result.get("fund_score", 50.0)
+
+            analysis_summary[symbol] = {
+                "symbol":             symbol,
+                "sector":             cdata.get("sector", "EQUITY"),
+                "price":              cdata.get("price", 0),
+                "fund_direction":     result.get("fund_direction", "NEUTRAL"),
+                "fund_confidence":    result.get("fund_confidence", 0.0),
+                "fund_score":         fund_sc,
+                "fund_daily_score":   daily_sc,
+                "fund_monthly_score": monthly_sc,
+                "fund_yearly_score":  yearly_sc,
+                "fund_rationale":     result.get("fund_rationale", []),
+                "fund_features":      result.get("fund_features", {}),
+                "fund_breakdown":     fund_breakdown,
+                "tech_direction":     result.get("tech_direction", "NEUTRAL"),
+                "action":             action,
+                "gate_passed":        gate_passed,
+                "win_prob":           round(win_prob, 4),
+                "consensus":          result.get("consensus_reached", False),
+                "reason":             result.get("reason", ""),
+                "orderflow":          result.get("orderflow", {}),
+                "features":           result.get("features", {}),
+                "order":              result.get("order"),
+                "scanned_at":         datetime.now().isoformat(),
+                "scan_no":            0,
+            }
+
             recent_decisions.append({
-                "timestamp": datetime.now().isoformat(),
-                "symbol": symbol,
-                "fund_direction": result.get("fund_direction", "NEUTRAL"),
-                "tech_direction": result.get("tech_direction", "NEUTRAL"),
-                "consensus": result.get("consensus_reached", False),
-                "action": result.get("action", "NO_TRADE"),
-                "reason": result.get("reason", ""),
-                "orderflow": result.get("orderflow", {})
+                "timestamp":          datetime.now().isoformat(),
+                "symbol":             symbol,
+                "fund_direction":     result.get("fund_direction", "NEUTRAL"),
+                "fund_score":         fund_sc,
+                "fund_daily_score":   daily_sc,
+                "fund_monthly_score": monthly_sc,
+                "fund_yearly_score":  yearly_sc,
+                "tech_direction":     result.get("tech_direction", "NEUTRAL"),
+                "consensus":          result.get("consensus_reached", False),
+                "action":             action,
+                "reason":             result.get("reason", ""),
+                "orderflow":          result.get("orderflow", {})
             })
             self._send_json(200, result)
+
+        elif self.path == "/api/fundamentals":
+            sym = payload.get("symbol", "").upper().strip()
+            if sym and sym in NIFTY50_UNIVERSE:
+                self._send_json(200, agent1.get_multi_timeframe_breakdown(sym))
+            else:
+                all_b = {s: agent1.get_multi_timeframe_breakdown(s) for s in AUTO_WATCHLIST}
+                self._send_json(200, {"total": len(all_b), "symbols": all_b})
 
         elif self.path == "/api/kill-switch":
             if active_broker:
