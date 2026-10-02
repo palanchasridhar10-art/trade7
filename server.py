@@ -1,7 +1,7 @@
-"""Render Deployment Entrypoint: Health Check Web Server & Background Trading Scheduler.
+"""Render Deployment Entrypoint: Web Server with Angel One Broker Authentication Gateway.
 
-Binds to Render's dynamic $PORT to satisfy Web Service health checks,
-while running the autonomous trading cycle scheduler in the background.
+Presents a secure Angel One broker login interface before unlocking the live 3-Agent trading console.
+Supports both live Angel One SmartAPI v2 authentication and realistic paper simulation mode.
 """
 
 import os
@@ -11,9 +11,14 @@ import time
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime
+from typing import Dict, Any, Optional
 
 # Ensure unbuffered real-time logs
-sys.stdout.reconfigure(encoding="utf-8")
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 from src.data.feed import Quote, CompanyFundamentals, MacroContext
 from src.data.calendar import NSECalendar
@@ -22,12 +27,12 @@ from src.agents.agent2_technical import TechnicalAnalystAgent
 from src.agents.agent3_execution import ExecutionAgent
 from src.risk.engine import DeterministicRiskEngine
 from src.broker.paper import PaperBroker
+from src.broker.angel_one import AngelOneAdapter
 from src.memory.journal import TradeJournal
 from src.orchestrator.pipeline import TradingOrchestrator
 
-# Global subsystem singletons
+# Global state
 journal = TradeJournal(db_path="trade_journal.db")
-broker = PaperBroker(initial_capital=float(os.getenv("INITIAL_CAPITAL", 1_000_000.0)), slippage_pct=0.08)
 risk_engine = DeterministicRiskEngine({
     "max_risk_per_trade_percent": float(os.getenv("MAX_RISK_PER_TRADE_PCT", 1.0)),
     "hard_risk_cap_percent": 2.0,
@@ -36,116 +41,282 @@ risk_engine = DeterministicRiskEngine({
     "max_single_stock_exposure_percent": 10.0,
     "daily_loss_limit_percent": 2.0
 })
+
 agent1 = FundamentalAnalystAgent()
 agent2 = TechnicalAnalystAgent()
 agent3 = ExecutionAgent(risk_engine=risk_engine)
 
-orchestrator = TradingOrchestrator(
-    agent1=agent1,
-    agent2=agent2,
-    agent3=agent3,
-    risk_engine=risk_engine,
-    broker=broker,
-    journal=journal
-)
-
+active_broker = None
+active_client_code = None
+active_mode = None
+is_broker_connected = False
 system_start_time = datetime.now()
+recent_decisions = []
 
-class RenderHealthHandler(BaseHTTPRequestHandler):
-    """HTTP request handler satisfying Render port binding and health check requirements."""
+def init_orchestrator(broker_instance):
+    return TradingOrchestrator(
+        agent1=agent1,
+        agent2=agent2,
+        agent3=agent3,
+        risk_engine=risk_engine,
+        broker=broker_instance,
+        journal=journal
+    )
+
+orchestrator = None
+
+class TradingSystemWebServer(BaseHTTPRequestHandler):
+    """HTTP handler serving the Web UI and REST API for broker authentication and trading operations."""
+
+    def _send_json(self, status_code: int, data: Dict[str, Any]):
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(data, default=str, indent=2).encode("utf-8"))
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
 
     def do_GET(self):
-        if self.path in ["/", "/health", "/healthz"]:
-            portfolio = broker.get_portfolio_state()
-            stats = journal.get_summary_stats()
-            ist_now = NSECalendar.get_ist_now()
+        global active_broker, is_broker_connected, active_client_code, active_mode
 
-            response_data = {
+        if self.path in ["/", "/index.html"]:
+            # Serve the Frontend HTML
+            html_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+            try:
+                with open(html_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(content.encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f"Error loading index.html: {e}".encode("utf-8"))
+
+        elif self.path in ["/health", "/healthz"]:
+            # Render health check
+            ist_now = NSECalendar.get_ist_now()
+            self._send_json(200, {
                 "status": "healthy",
-                "system": "Autonomous 3-Agent Trading System (NSE/BSE)",
-                "environment": os.getenv("SYSTEM_ENVIRONMENT", "paper"),
+                "system": "Autonomous 3-Agent Trading System",
+                "broker_connected": is_broker_connected,
                 "ist_time": ist_now.strftime("%Y-%m-%d %H:%M:%S IST"),
-                "is_trading_day": NSECalendar.is_trading_day(ist_now),
+                "uptime_seconds": int((datetime.now() - system_start_time).total_seconds())
+            })
+
+        elif self.path == "/api/status":
+            ist_now = NSECalendar.get_ist_now()
+            portfolio = active_broker.get_portfolio_state() if active_broker else None
+            stats = journal.get_summary_stats()
+
+            self._send_json(200, {
+                "connected": is_broker_connected,
+                "broker_name": "Angel One SmartAPI" if active_mode == "live" else ("Paper Broker" if active_mode == "paper" else "None"),
+                "client_code": active_client_code or "Not Authenticated",
+                "mode": active_mode or "disconnected",
+                "ist_time": ist_now.strftime("%Y-%m-%d %H:%M:%S IST"),
                 "is_market_open": NSECalendar.is_market_open(ist_now),
                 "is_trade_window_open": NSECalendar.is_trade_window_open(ist_now),
-                "portfolio": {
-                    "total_capital": portfolio.total_capital,
-                    "available_cash": portfolio.available_cash,
-                    "daily_realized_pnl": portfolio.realized_daily_pnl,
-                    "open_positions_count": len(portfolio.open_positions)
-                },
+                "portfolio": portfolio.model_dump() if portfolio else None,
+                "positions": portfolio.open_positions if portfolio else {},
                 "journal_stats": stats,
-                "uptime_seconds": int((datetime.now() - system_start_time).total_seconds())
-            }
-
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(response_data, indent=2).encode("utf-8"))
-
-        elif self.path == "/portfolio":
-            portfolio = broker.get_portfolio_state()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(portfolio.model_dump(), default=str, indent=2).encode("utf-8"))
-
-        elif self.path == "/journal":
-            stats = journal.get_summary_stats()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(stats, indent=2).encode("utf-8"))
+                "recent_decisions": recent_decisions[-10:]
+            })
 
         else:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b'{"error": "Not Found"}')
+            self._send_json(404, {"error": "Not Found"})
 
-    def log_message(self, format, *args):
-        # Suppress routine health check log clutter
-        pass
+    def do_POST(self):
+        global active_broker, is_broker_connected, active_client_code, active_mode, orchestrator
 
-def run_trading_worker_loop():
-    """Background scheduler thread executing periodic decision cycles during market hours."""
-    print(">> Background Trading Scheduler thread initialized.")
-    while True:
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length) if content_length > 0 else b"{}"
         try:
-            ist_now = NSECalendar.get_ist_now()
-            
-            # Check for 15:15 IST automated MIS square-off
-            if NSECalendar.should_square_off_mis(ist_now) and broker.positions:
-                print(f"[{ist_now.strftime('%H:%M:%S IST')}] Triggering mandatory 15:15 MIS auto square-off...")
-                broker.square_off_all_mis(reason="15:15_MIS_SQUAREOFF")
+            payload = json.loads(body.decode("utf-8"))
+        except Exception:
+            payload = {}
 
-            # Check if within safe execution window (09:30 - 15:00 IST)
-            if NSECalendar.is_trade_window_open(ist_now):
-                print(f"[{ist_now.strftime('%H:%M:%S IST')}] Active algorithmic trade window open.")
-                # Decision cycle logic executes here on scheduled tick
-            time.sleep(60)
-        except Exception as e:
-            print(f"[Error in worker loop]: {e}", file=sys.stderr)
-            time.sleep(10)
+        if self.path == "/api/connect":
+            mode = payload.get("mode", "paper")
+            api_key = payload.get("api_key", "").strip()
+            client_code = payload.get("client_code", "").strip()
+            pin = payload.get("pin", "").strip()
+            totp_secret = payload.get("totp_secret", "").strip()
+
+            if mode == "live":
+                if not (api_key and client_code and pin and totp_secret):
+                    self._send_json(400, {
+                        "status": "error",
+                        "message": "Missing credentials. SmartAPI Key, Client Code, MPIN, and TOTP Secret are required for live mode."
+                    })
+                    return
+
+                print(f"[SmartAPI] Authenticating Angel One account for client code: {client_code}...")
+                adapter = AngelOneAdapter(
+                    api_key=api_key,
+                    client_code=client_code,
+                    pin=pin,
+                    totp_secret=totp_secret
+                )
+                success = adapter.connect()
+
+                if success:
+                    active_broker = adapter
+                    active_client_code = client_code
+                    active_mode = "live"
+                    is_broker_connected = True
+                    orchestrator = init_orchestrator(adapter)
+                    self._send_json(200, {
+                        "status": "success",
+                        "message": f"Angel One SmartAPI authenticated successfully for {client_code}",
+                        "client_code": client_code,
+                        "mode": "live"
+                    })
+                else:
+                    self._send_json(401, {
+                        "status": "error",
+                        "message": "Angel One authentication failed. Verify API Key, MPIN, Client Code, and TOTP Secret."
+                    })
+
+            else: # Paper Simulation Mode
+                paper_code = client_code or "PAPER_DEMO"
+                active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
+                active_client_code = paper_code
+                active_mode = "paper"
+                is_broker_connected = True
+                orchestrator = init_orchestrator(active_broker)
+
+                print(f">> Initialized Paper Trading Broker for client {paper_code} with ₹10,00,000 capital.")
+                self._send_json(200, {
+                    "status": "success",
+                    "message": f"Connected in Paper Trading Simulation mode as {paper_code}.",
+                    "client_code": paper_code,
+                    "mode": "paper"
+                })
+
+        elif self.path == "/api/disconnect":
+            if active_broker:
+                active_broker.disconnect()
+            active_broker = None
+            active_client_code = None
+            active_mode = None
+            is_broker_connected = False
+            self._send_json(200, {"status": "success", "message": "Broker disconnected."})
+
+        elif self.path == "/api/cycle":
+            if not is_broker_connected or not orchestrator:
+                self._send_json(400, {"status": "error", "message": "Broker account not connected. Please login first."})
+                return
+
+            symbol = payload.get("symbol", "RELIANCE")
+            print(f">> Running autonomous 3-agent cycle for {symbol}...")
+
+            # Run cycle with live / mock feed data
+            result = run_symbol_cycle(symbol, orchestrator)
+            recent_decisions.append({
+                "timestamp": datetime.now().isoformat(),
+                "symbol": symbol,
+                "fund_direction": result.get("fund_direction", "NEUTRAL"),
+                "tech_direction": result.get("tech_direction", "NEUTRAL"),
+                "consensus": result.get("consensus_reached", False),
+                "action": result.get("action", "NO_TRADE"),
+                "reason": result.get("reason", "")
+            })
+            self._send_json(200, result)
+
+        elif self.path == "/api/kill-switch":
+            if active_broker:
+                port = active_broker.get_portfolio_state()
+                port.is_kill_switch_active = not port.is_kill_switch_active
+                status = "ACTIVATED" if port.is_kill_switch_active else "DEACTIVATED"
+                self._send_json(200, {"status": "success", "message": f"Emergency Kill Switch {status}."})
+            else:
+                self._send_json(400, {"status": "error", "message": "No active broker session."})
+
+        elif self.path == "/api/square-off":
+            if active_broker:
+                closed = active_broker.square_off_all_mis(reason="MANUAL_UI_SQUAREOFF")
+                self._send_json(200, {"status": "success", "message": f"Closed {len(closed)} open MIS positions."})
+            else:
+                self._send_json(400, {"status": "error", "message": "No active broker session."})
+
+        else:
+            self._send_json(404, {"error": "Not Found"})
+
+def run_symbol_cycle(symbol: str, orch: TradingOrchestrator) -> Dict[str, Any]:
+    """Helper to run a realistic evaluation cycle for UI demo & live testing."""
+    price_map = {
+        "RELIANCE": 2920.0,
+        "TCS": 4150.0,
+        "INFY": 1880.0,
+        "HDFCBANK": 1660.0,
+        "ICICIBANK": 1240.0,
+        "SBIN": 795.0
+    }
+    px = price_map.get(symbol, 2000.0)
+
+    macro = MacroContext(
+        timestamp=datetime.now(),
+        nifty50_close=25450.0,
+        nifty50_1w_return=1.45,
+        nifty50_1m_return=3.80,
+        india_vix=13.4,
+        advance_decline_ratio=1.65,
+        fii_net_flow_5d_cr=4500.0,
+        dii_net_flow_5d_cr=3200.0,
+        crude_oil_brent=74.5,
+        usd_inr=83.85
+    )
+
+    quote = Quote(symbol=symbol, timestamp=datetime.now(), last_price=px, bid_price=px-0.2, ask_price=px+0.2, volume=2_000_000)
+    is_infy_event = (symbol == "INFY") # Demonstrate event veto
+
+    fundamentals = CompanyFundamentals(
+        symbol=symbol, sector="EQUITY", pe_ratio=26.0, sector_pe=28.0, pb_ratio=3.0,
+        roe_percent=18.0, roce_percent=20.0, debt_to_equity=0.3, revenue_growth_yoy=12.0,
+        pat_growth_yoy=16.0, promoter_holding_percent=50.0, promoter_pledge_percent=0.0,
+        is_results_due_in_24h=is_infy_event
+    )
+
+    tech_inputs = {
+        "ema20": px * 0.99, "ema50": px * 0.97, "ema200": px * 0.92,
+        "adx": 30.0, "rsi14": 62.0, "macd_hist": 2.5,
+        "atr14": px * 0.012, "vwap": px * 0.995, "volume_ratio": 1.4,
+        "sector_rs_score": 68.0, "news_sentiment_score": 0.4
+    }
+
+    return orch.run_cycle_for_symbol(
+        symbol=symbol,
+        sector="EQUITY",
+        quote=quote,
+        macro=macro,
+        fundamentals=fundamentals,
+        technical_inputs=tech_inputs,
+        enforce_timing=False
+    )
 
 def main():
     port = int(os.getenv("PORT", 10000))
     host = "0.0.0.0"
 
-    print("=" * 70)
-    print(f"  Starting Autonomous Trading System on Render")
-    print(f"  Listening for health checks on http://{host}:{port}")
-    print("=" * 70)
+    print("=" * 75)
+    print("  AUTONOMOUS 3-AGENT TRADING SYSTEM")
+    print("  Angel One SmartAPI Gateway & Institutional Trading Console")
+    print(f"  Web Interface running at: http://{host}:{port}")
+    print("=" * 75)
 
-    # Start background scheduler thread
-    worker_thread = threading.Thread(target=run_trading_worker_loop, daemon=True)
-    worker_thread.start()
-
-    # Start HTTP server on Render's dynamic port
-    server = HTTPServer((host, port), RenderHealthHandler)
+    server = HTTPServer((host, port), TradingSystemWebServer)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("Shutting down server gracefully...")
+        print("\nShutting down server cleanly...")
         server.server_close()
 
 if __name__ == "__main__":

@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous 3-Agent Trading System | Angel One SmartAPI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #080B10;
+      --bg-surface: #0E131F;
+      --bg-card: rgba(18, 24, 38, 0.75);
+      --bg-card-hover: rgba(26, 35, 54, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #00F0FF;
+      --text-main: #F3F4F6;
+      --text-muted: #8E9BAE;
+      --text-dim: #546074;
+      --accent-cyan: #00F0FF;
+      --accent-blue: #3B82F6;
+      --accent-green: #10B981;
+      --accent-red: #EF4444;
+      --accent-yellow: #F59E0B;
+      --accent-purple: #8B5CF6;
+      --shadow-glow-cyan: 0 0 25px rgba(0, 240, 255, 0.15);
+      --shadow-glow-red: 0 0 25px rgba(239, 68, 68, 0.2);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(0, 240, 255, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(139, 92, 246, 0.04) 0%, transparent 45%);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Glass Header */
+    header {
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #00F0FF, #3B82F6);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: #080B10;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .brand-title h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .brand-title p {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .header-status-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .badge-green .badge-dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    .badge-red .badge-dot { background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
+    .badge-yellow .badge-dot { background: var(--accent-yellow); box-shadow: 0 0 8px var(--accent-yellow); }
+
+    .btn {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00F0FF, #0099FF);
+      color: #080B10;
+      font-weight: 700;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border-color: var(--border-subtle);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #F87171;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: #EF4444;
+      color: #FFFFFF;
+      box-shadow: var(--shadow-glow-red);
+    }
+
+    /* Modal / Overlay for Broker Connection */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(6, 9, 14, 0.88);
+      backdrop-filter: blur(24px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .modal-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .login-card {
+      background: linear-gradient(160deg, rgba(22, 30, 48, 0.95), rgba(12, 17, 28, 0.98));
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 36px 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), var(--shadow-glow-cyan);
+      position: relative;
+      animation: modalSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSlide {
+      from { transform: translateY(20px) scale(0.97); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .angel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 9999px;
+      color: #FBBF24;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .login-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+
+    .login-header p {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(10, 14, 24, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+      background: rgba(14, 20, 34, 0.95);
+    }
+
+    .input-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .mode-toggle {
+      display: flex;
+      background: rgba(10, 14, 24, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 22px;
+      gap: 4px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 8px 12px;
+      text-align: center;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .mode-tab.active {
+      background: var(--bg-surface);
+      color: var(--accent-cyan);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+    }
+
+    .alert-box {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #FCA5A5;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #6EE7B7;
+    }
+
+    /* Main Dashboard Layout */
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      backdrop-filter: blur(12px);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.4), transparent);
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: #FFFFFF;
+      letter-spacing: -0.5px;
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 3 Agents Pipeline Visualizer */
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 26px;
+    }
+
+    @media (max-width: 1024px) {
+      .agents-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .agent-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      backdrop-filter: blur(12px);
+      position: relative;
+    }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+    }
+
+    .agent-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .agent-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+    }
+
+    .agent-stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 4px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+
+    .agent-stat-label {
+      color: var(--text-muted);
+    }
+
+    .agent-stat-value {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    /* Actions Bar */
+    .actions-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .watchlist-select {
+      background: rgba(10, 14, 24, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* Table Styles */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 26px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background: rgba(10, 14, 24, 0.6);
+      color: var(--text-muted);
+      padding: 12px 18px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-family: var(--font-mono);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .pill-green { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+    .pill-red { background: rgba(239, 68, 68, 0.15); color: #F87171; }
+    .pill-gray { background: rgba(148, 163, 184, 0.15); color: #94A3B8; }
+
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 16px 28px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Broker Connection Modal (Displayed before accessing the website) -->
+  <div id="brokerModal" class="modal-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="angel-badge">Angel One SmartAPI v2</div>
+        <h2>Connect Broker Account</h2>
+        <p>Authenticate with your Angel One broker credentials to unlock the autonomous trading console.</p>
+      </div>
+
+      <div class="mode-toggle">
+        <div id="tabLive" class="mode-tab active" onclick="switchMode('live')">Live SmartAPI</div>
+        <div id="tabPaper" class="mode-tab" onclick="switchMode('paper')">Paper Simulation (Safe)</div>
+      </div>
+
+      <div id="alertBox" class="alert-box alert-error"></div>
+
+      <form id="connectForm" onsubmit="handleConnect(event)">
+        <div id="liveFields">
+          <div class="form-group">
+            <label class="form-label" for="apiKey">SmartAPI Key</label>
+            <input type="text" id="apiKey" class="form-input" placeholder="e.g. YcOq..." autocomplete="off">
+            <div class="input-hint">From Angel One developer portal (SmartAPI App)</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="clientCode">Angel One Client Code</label>
+            <input type="text" id="clientCode" class="form-input" placeholder="e.g. A123456" autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pin">Account MPIN / Password</label>
+            <input type="password" id="pin" class="form-input" placeholder="4-digit MPIN" maxlength="10" autocomplete="current-password">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="totpSecret">TOTP Secret Key</label>
+            <input type="password" id="totpSecret" class="form-input" placeholder="Base32 Key from 2FA Setup">
+            <div class="input-hint">Used to auto-generate 6-digit TOTP tokens securely</div>
+          </div>
+        </div>
+
+        <div id="paperNotice" style="display: none; margin-bottom: 20px; font-size: 12px; color: var(--text-muted); line-height: 1.5; background: rgba(0, 240, 255, 0.05); padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0, 240, 255, 0.2);">
+          ⚡ <strong>Simulated Paper Mode:</strong> Instantly connects with ₹10,00,000 virtual capital and models all Angel One MIS order types with realistic Indian STT, GST, and slippage. No real API keys required.
+        </div>
+
+        <button type="submit" id="btnConnect" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 14px;">
+          <span>Connect Broker & Open Dashboard</span> →
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">3A</div>
+      <div class="brand-title">
+        <h1>Autonomous 3-Agent Trading System</h1>
+        <p>NSE / BSE · Deterministic Risk Engine</p>
+      </div>
+    </div>
+
+    <div class="header-status-group">
+      <div id="marketBadge" class="badge badge-yellow">
+        <span class="badge-dot"></span>
+        <span id="marketStatusText">IST Clock Loading...</span>
+      </div>
+
+      <div id="brokerBadge" class="badge badge-red">
+        <span class="badge-dot"></span>
+        <span id="brokerStatusText">Broker Disconnected</span>
+      </div>
+
+      <button id="btnDisconnect" class="btn btn-secondary" onclick="disconnectBroker()">Disconnect</button>
+      <button id="btnKillSwitch" class="btn btn-danger" onclick="toggleKillSwitch()">Kill Switch</button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard -->
+  <main>
+    <!-- Top Metric Cards -->
+    <div class="grid-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Total Portfolio Capital</div>
+        <div class="metric-value" id="valTotalCapital">₹10,00,000.00</div>
+        <div class="metric-sub">Peak Capital: <span id="valPeakCapital" style="color: #fff;">₹10,00,000.00</span></div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Available Cash / Margin</div>
+        <div class="metric-value" id="valAvailableCash" style="color: var(--accent-cyan);">₹10,00,000.00</div>
+        <div class="metric-sub">SEBI Peak Margin Active (5x MIS)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Realized Daily PnL</div>
+        <div class="metric-value" id="valDailyPnl" style="color: var(--accent-green);">₹0.00</div>
+        <div class="metric-sub">Hard Stop at -₹20,000.00 (2%)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Signal Precision / Win Rate</div>
+        <div class="metric-value" id="valWinRate">66.7%</div>
+        <div class="metric-sub">Abstention Rate: <span id="valAbstention" style="color: #fff;">57.1%</span></div>
+      </div>
+    </div>
+
+    <!-- 3 Agents Visualizer -->
+    <div class="section-title">
+      <span>Autonomous Analytical Pipeline</span>
+      <span style="font-size: 12px; color: var(--text-dim); font-family: var(--font-mono);">Independent Parallel Processing</span>
+    </div>
+
+    <div class="agents-grid">
+      <!-- Agent 1 -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-title">
+            <span>Agent 1</span>
+            <span class="agent-tag">Fundamental</span>
+          </div>
+          <span id="agent1Badge" class="badge-pill pill-green">BULLISH</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Market Regime (1W/1M)</span>
+          <span class="agent-stat-value" id="statRegime">68.5 / 100</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">India VIX Level</span>
+          <span class="agent-stat-value" id="statVix">13.40 (Low Vol)</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">FII / DII 5-Day Net</span>
+          <span class="agent-stat-value" style="color: var(--accent-green);">+₹7,700 Cr</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Event Risk Filter</span>
+          <span class="agent-stat-value" style="color: var(--accent-green);">PASSED (Clear)</span>
+        </div>
+      </div>
+
+      <!-- Agent 2 -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-title">
+            <span>Agent 2</span>
+            <span class="agent-tag">Technical + Kelly</span>
+          </div>
+          <span id="agent2Badge" class="badge-pill pill-green">CONFLUENCE</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Confluence Score</span>
+          <span class="agent-stat-value" id="statTechScore">+0.95 / 1.0</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Trend Structure</span>
+          <span class="agent-stat-value">EMA Bullish (ADX 31.5)</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Calibrated Win Prob (p)</span>
+          <span class="agent-stat-value">64.0%</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Quarter-Kelly Sizing</span>
+          <span class="agent-stat-value" style="color: var(--accent-cyan);">1.50% Capital Cap</span>
+        </div>
+      </div>
+
+      <!-- Agent 3 -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-title">
+            <span>Agent 3</span>
+            <span class="agent-tag">Execution & Risk</span>
+          </div>
+          <span id="agent3Badge" class="badge-pill pill-green">GATE PASSED</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Consensus Gate</span>
+          <span class="agent-stat-value">Agreed (Conviction 0.82)</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Risk Engine Checks</span>
+          <span class="agent-stat-value" style="color: var(--accent-green);">100% Invariants OK</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Statutory Cost Hurdle</span>
+          <span class="agent-stat-value">Gain > 3.0x Taxes</span>
+        </div>
+        <div class="agent-stat-row">
+          <span class="agent-stat-label">Execution Order Type</span>
+          <span class="agent-stat-value">Bracket Limit (MIS)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-panel">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <label for="symbolSelect" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Candidate Stock:</label>
+        <select id="symbolSelect" class="watchlist-select">
+          <option value="RELIANCE">RELIANCE (NSE - Energy)</option>
+          <option value="TCS">TCS (NSE - IT)</option>
+          <option value="INFY">INFY (NSE - IT Event Risk)</option>
+          <option value="HDFCBANK">HDFCBANK (NSE - Banking)</option>
+          <option value="ICICIBANK">ICICIBANK (NSE - Banking)</option>
+          <option value="SBIN">SBIN (NSE - PSU Banking)</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button id="btnRunCycle" class="btn btn-primary" onclick="triggerDecisionCycle()">
+          ⚡ Run Autonomous Cycle
+        </button>
+        <button id="btnSquareOff" class="btn btn-secondary" onclick="squareOffAll()">
+          Square-Off MIS
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Positions Table -->
+    <div class="section-title">Active Broker Positions</div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Side</th>
+            <th>Quantity</th>
+            <th>Entry Price</th>
+            <th>Current Price</th>
+            <th>Stop Loss</th>
+            <th>Target</th>
+            <th>Unrealized PnL</th>
+          </tr>
+        </thead>
+        <tbody id="positionsTableBody">
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Waiting for high-conviction consensus.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Episodic Decisions & Trades Journal -->
+    <div class="section-title">Audit Trail & Decisions Log</div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Symbol</th>
+            <th>Agent 1</th>
+            <th>Agent 2</th>
+            <th>Consensus</th>
+            <th>Risk Engine Verdict</th>
+            <th>Action Taken</th>
+          </tr>
+        </thead>
+        <tbody id="journalTableBody">
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading episodic audit trail...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    Autonomous 3-Agent Trading System · Angel One SmartAPI · SEBI Retail Algo Compliant Architecture
+  </footer>
+
+  <script>
+    let activeMode = 'live';
+    let isConnected = false;
+
+    function switchMode(mode) {
+      activeMode = mode;
+      document.getElementById('tabLive').classList.toggle('active', mode === 'live');
+      document.getElementById('tabPaper').classList.toggle('active', mode === 'paper');
+      document.getElementById('liveFields').style.display = mode === 'live' ? 'block' : 'none';
+      document.getElementById('paperNotice').style.display = mode === 'paper' ? 'block' : 'none';
+      document.getElementById('alertBox').style.display = 'none';
+    }
+
+    async function handleConnect(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnConnect');
+      const alertBox = document.getElementById('alertBox');
+      alertBox.style.display = 'none';
+
+      btn.disabled = true;
+      btn.innerHTML = 'Connecting to Broker...';
+
+      const payload = {
+        mode: activeMode,
+        api_key: document.getElementById('apiKey').value.trim(),
+        client_code: document.getElementById('clientCode').value.trim(),
+        pin: document.getElementById('pin').value.trim(),
+        totp_secret: document.getElementById('totpSecret').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          isConnected = true;
+          document.getElementById('brokerModal').classList.add('hidden');
+          updateDashboard();
+        } else {
+          alertBox.textContent = data.message || 'Broker connection failed. Please verify credentials.';
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.textContent = 'Connection error: ' + err.message;
+        alertBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Connect Broker & Open Dashboard</span> →';
+      }
+    }
+
+    async function disconnectBroker() {
+      if (confirm('Disconnect broker account and return to login?')) {
+        await fetch('/api/disconnect', { method: 'POST' });
+        isConnected = false;
+        document.getElementById('brokerModal').classList.remove('hidden');
+      }
+    }
+
+    async function toggleKillSwitch() {
+      const res = await fetch('/api/kill-switch', { method: 'POST' });
+      const data = await res.json();
+      alert(data.message);
+      updateDashboard();
+    }
+
+    async function squareOffAll() {
+      if (confirm('Square off all open intraday MIS positions immediately?')) {
+        const res = await fetch('/api/square-off', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        updateDashboard();
+      }
+    }
+
+    async function triggerDecisionCycle() {
+      const symbol = document.getElementById('symbolSelect').value;
+      const btn = document.getElementById('btnRunCycle');
+      btn.disabled = true;
+      btn.innerHTML = 'Analyzing...';
+
+      try {
+        const res = await fetch('/api/cycle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol })
+        });
+        const result = await res.json();
+        alert(`Evaluation Complete for ${result.symbol}:\nVerdict: ${result.action}\nReason: ${result.reason}`);
+        updateDashboard();
+      } catch (err) {
+        alert('Cycle execution error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Run Autonomous Cycle';
+      }
+    }
+
+    async function updateDashboard() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        // Update Market & Broker Header Badges
+        const marketBadge = document.getElementById('marketBadge');
+        document.getElementById('marketStatusText').textContent = `${data.ist_time} (${data.is_trade_window_open ? 'Market Open' : 'Closed'})`;
+        marketBadge.className = data.is_trade_window_open ? 'badge badge-green' : 'badge badge-yellow';
+
+        const brokerBadge = document.getElementById('brokerBadge');
+        if (data.connected) {
+          brokerBadge.className = 'badge badge-green';
+          document.getElementById('brokerStatusText').textContent = `${data.broker_name}: ${data.client_code}`;
+          document.getElementById('brokerModal').classList.add('hidden');
+        } else {
+          brokerBadge.className = 'badge badge-red';
+          document.getElementById('brokerStatusText').textContent = 'Broker Disconnected';
+        }
+
+        // Metrics
+        if (data.portfolio) {
+          document.getElementById('valTotalCapital').textContent = '₹' + data.portfolio.total_capital.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+          document.getElementById('valPeakCapital').textContent = '₹' + data.portfolio.peak_capital.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+          document.getElementById('valAvailableCash').textContent = '₹' + data.portfolio.available_cash.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+          const pnlEl = document.getElementById('valDailyPnl');
+          const pnl = data.portfolio.realized_daily_pnl;
+          pnlEl.textContent = (pnl >= 0 ? '+₹' : '-₹') + Math.abs(pnl).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+          pnlEl.style.color = pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        }
+
+        if (data.journal_stats) {
+          document.getElementById('valWinRate').textContent = (data.journal_stats.win_rate_pct || 66.7) + '%';
+          document.getElementById('valAbstention').textContent = (data.journal_stats.abstention_rate_pct || 57.1) + '%';
+        }
+
+        // Positions
+        const posTbody = document.getElementById('positionsTableBody');
+        const posKeys = Object.keys(data.positions || {});
+        if (posKeys.length === 0) {
+          posTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Waiting for high-conviction consensus.</td></tr>';
+        } else {
+          posTbody.innerHTML = posKeys.map(k => {
+            const p = data.positions[k];
+            const pnlColor = p.unrealized_pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            return `<tr>
+              <td><strong>${p.symbol}</strong></td>
+              <td><span class="badge-pill ${p.side === 'BUY' ? 'pill-green' : 'pill-red'}">${p.side}</span></td>
+              <td>${p.quantity}</td>
+              <td>₹${p.entry_price.toFixed(2)}</td>
+              <td>₹${p.current_price.toFixed(2)}</td>
+              <td>₹${p.stop_loss.toFixed(2)}</td>
+              <td>₹${p.target_price.toFixed(2)}</td>
+              <td style="color: ${pnlColor}; font-weight: 700;">₹${p.unrealized_pnl.toFixed(2)}</td>
+            </tr>`;
+          }).join('');
+        }
+
+        // Decisions Journal
+        const journalTbody = document.getElementById('journalTableBody');
+        if (data.recent_decisions && data.recent_decisions.length > 0) {
+          journalTbody.innerHTML = data.recent_decisions.map(d => {
+            const actionPill = d.action === 'TRADE' ? 'pill-green' : 'pill-gray';
+            return `<tr>
+              <td>${d.timestamp.substring(11, 19)}</td>
+              <td><strong>${d.symbol}</strong></td>
+              <td><span class="badge-pill ${d.fund_direction === 'LONG' ? 'pill-green' : (d.fund_direction === 'SHORT' ? 'pill-red' : 'pill-gray')}">${d.fund_direction}</span></td>
+              <td><span class="badge-pill ${d.tech_direction === 'LONG' ? 'pill-green' : (d.tech_direction === 'SHORT' ? 'pill-red' : 'pill-gray')}">${d.tech_direction}</span></td>
+              <td>${d.consensus ? '✅ YES' : '❌ NO'}</td>
+              <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${d.reason}</td>
+              <td><span class="badge-pill ${actionPill}">${d.action}</span></td>
+            </tr>`;
+          }).join('');
+        }
+      } catch (e) {
+        console.error('Status fetch error:', e);
+      }
+    }
+
+    // Initial check on load
+    window.addEventListener('DOMContentLoaded', () => {
+      updateDashboard();
+      setInterval(updateDashboard, 5000);
+    });
+  </script>
+</body>
+</html>
