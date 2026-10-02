@@ -1,4 +1,4 @@
-"""End-to-end test: verifies all 50 Nifty stocks are scanned and trades are auto-placed."""
+"""End-to-end test: verifies all 50 Nifty stocks are evaluated, ranked by profit potential, and ONLY the single most profitable company trade is placed."""
 import sys
 sys.path.insert(0, '.')
 from datetime import datetime
@@ -14,7 +14,7 @@ from src.orchestrator.pipeline import TradingOrchestrator
 
 # Setup
 journal = TradeJournal(db_path=":memory:")
-risk_engine = DeterministicRiskEngine()
+risk_engine = DeterministicRiskEngine()  # Defaults to max_open_positions = 1
 agent1 = FundamentalAnalystAgent()
 agent2 = TechnicalAnalystAgent()
 agent3 = ExecutionAgent(risk_engine=risk_engine)
@@ -32,15 +32,17 @@ macro = MacroContext(
     crude_oil_brent=74.5, usd_inr=83.85
 )
 
-print(f"\n{'='*70}")
-print(f"  FULL NIFTY 50 AUTO-EXECUTION TEST")
+print(f"\n{'='*75}")
+print(f"  FULL NIFTY 50 UNIVERSE SCAN: SINGLE BEST PROFIT TRADE OF THE DAY")
 print(f"  Initial Capital: Rs.{broker.capital:,.2f}")
-print(f"  Max Open Positions: {risk_engine.max_open_positions}")
-print(f"{'='*70}\n")
+print(f"  Max Open Positions: {risk_engine.max_open_positions} (Strictly 1 Company Trade Policy)")
+print(f"{'='*75}\n")
 
-trades_placed = []
+evaluations = {}
+qualified_candidates = []
 skipped = []
 
+# Phase 1: Evaluate all 50 Nifty stocks with execute_order=False
 for symbol in NIFTY50_UNIVERSE.keys():
     cdata = NIFTY50_UNIVERSE[symbol]
     px = cdata["price"]
@@ -75,36 +77,70 @@ for symbol in NIFTY50_UNIVERSE.keys():
     result = orch.run_cycle_for_symbol(
         symbol=symbol, sector=cdata.get("sector", "EQUITY"),
         quote=quote, macro=macro, fundamentals=fundamentals,
-        technical_inputs=tech_inputs, enforce_timing=False
+        technical_inputs=tech_inputs, enforce_timing=False,
+        execute_order=False  # Scan and evaluate only
     )
 
-    action = result.get("action", "NO_TRADE")
+    evaluations[symbol] = result
     gate = result.get("features", {}).get("gate_passed", False)
     win_p = result.get("tech_confidence", 0)
+    rv = result.get("risk_verdict")
 
-    if action == "TRADE" and result.get("order"):
-        trades_placed.append((symbol, win_p, result.get("order", {}).get("quantity", 0)))
-        print(f"  [TRADE PLACED] {symbol:12s} | WinProb={win_p:.1%} | Gate={gate} | "
-              f"Qty={result['order'].get('quantity',0)}")
+    if result.get("consensus_reached") and rv and rv.approved_quantity > 0 and win_p >= 0.90:
+        qualified_candidates.append(result)
     else:
-        reason = result.get("reason", "")[:60]
-        skipped.append((symbol, gate, win_p, reason))
+        skipped.append((symbol, gate, win_p, result.get("reason", "")[:60]))
 
-print(f"\n{'='*70}")
-print(f"  RESULTS: {len(trades_placed)} trades placed | {len(skipped)} skipped")
-print(f"  Open Positions: {len(broker.positions)}")
+# Phase 2: Rank qualified candidates by Day Profit Potential Score
+qualified_candidates.sort(
+    key=lambda x: x.get("profit_metrics", {}).get("day_profit_potential_score", 0.0),
+    reverse=True
+)
+
+print(f"  Candidates Qualified for Trade: {len(qualified_candidates)} out of {len(NIFTY50_UNIVERSE)}")
+print("  Top 5 Ranked Candidates by Expected Profit Potential:")
+for rank, c in enumerate(qualified_candidates[:5], 1):
+    pm = c["profit_metrics"]
+    print(f"    #{rank} {c['symbol']:12s} | Score: {pm['day_profit_potential_score']:6.2f} | "
+          f"EV: +{pm['expected_profit_pct']:.1f}% | 5x Leveraged: +{pm['leveraged_expected_profit_pct']:.1f}% | "
+          f"WinProb: {c['tech_confidence']:.1%}")
+
+# Phase 3: Execute ONLY the single #1 highest-profit candidate
+top_candidate = qualified_candidates[0]
+top_symbol = top_candidate["symbol"]
+top_pm = top_candidate["profit_metrics"]
+
+executed_order = orch.execute_approved_trade(
+    symbol=top_symbol,
+    sector=top_candidate["sector"],
+    proposal=top_candidate["proposal"],
+    risk_verdict=top_candidate["risk_verdict"],
+    fund_signal=top_candidate["fund_signal"],
+    tech_signal=top_candidate["tech_signal"],
+    cycle_id=top_candidate["cycle_id"],
+    decision_id=top_candidate["decision_id"]
+)
+
+print(f"\n{'='*75}")
+print(f"  EXECUTION RESULT: Exactly 1 Trade Placed | 49 Companies Held Back")
+print(f"  Open Positions in Broker: {len(broker.positions)}")
 print(f"  Available Cash: Rs.{broker.capital:,.2f}")
-print(f"  Open Positions list: {list(broker.positions.keys())}")
-print(f"{'='*70}\n")
+print(f"  Held Position: {list(broker.positions.keys())}")
+print(f"{'='*75}\n")
 
-if trades_placed:
-    print("TRADES PLACED:")
-    for s, wp, qty in trades_placed:
-        pos = broker.positions.get(s)
-        if pos:
-            print(f"  {s:12s} | {pos.side.value:5s} | {qty:6d} units @ Rs.{pos.entry_price:,.2f}"
-                  f" | SL=Rs.{pos.stop_loss:,.2f} | TGT=Rs.{pos.target_price:,.2f}")
+pos = broker.positions.get(top_symbol)
+print(f"  [TRADE EXECUTED] {top_symbol} (Rank #1 Alpha Pick of the Day)")
+print(f"    Side:             {pos.side.value}")
+print(f"    Quantity:         {pos.quantity} units (90% capital allocation)")
+print(f"    Entry Price:      Rs.{pos.entry_price:,.2f}")
+print(f"    Stop Loss (-5%):  Rs.{pos.stop_loss:,.2f}")
+print(f"    Target (+18%):    Rs.{pos.target_price:,.2f}")
+print(f"    Expected Profit:  +{top_pm['expected_profit_pct']:.1f}%")
+print(f"    5x Leveraged EV:  +{top_pm['leveraged_expected_profit_pct']:.1f}% on margin capital")
+print(f"    Blocked Margin:   Rs.{pos.entry_price * pos.quantity * 0.20:,.2f} (20% SEBI MIS requirement)")
+print(f"    Unallocated Cash: Rs.{broker.capital:,.2f} (Safety Reserve)")
 
-print("\nSKIPPED (first 10):")
-for s, gate, wp, reason in skipped[:10]:
-    print(f"  {s:12s} | gate={gate} | win={wp:.0%} | {reason}")
+# Assertions
+assert len(broker.positions) == 1, f"Expected exactly 1 position, got {len(broker.positions)}"
+assert top_symbol in broker.positions, f"Expected {top_symbol} to be the open position"
+print("\n[SUCCESS] Single most profitable company trade placed successfully!")

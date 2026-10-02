@@ -25,7 +25,7 @@ class DeterministicRiskEngine:
         self.daily_loss_limit_pct = cfg.get("daily_loss_limit_percent", 15.0) / 100.0  # 15% daily hard stop
         self.weekly_loss_limit_pct = cfg.get("weekly_loss_limit_percent", 20.0) / 100.0 # 20% weekly hard stop
         self.max_drawdown_pct = cfg.get("max_drawdown_limit_percent", 25.0) / 100.0   # 25% max drawdown
-        self.max_open_positions = cfg.get("max_open_positions", 10)                   # Up to 10 simultaneous positions
+        self.max_open_positions = cfg.get("max_open_positions", 1)                    # Strictly 1 company trade at a time (Single Best Trade Policy)
         self.min_expected_gain_to_cost_ratio = cfg.get("min_expected_gain_to_cost_ratio", 3.0)
 
     def calculate_statutory_costs(self, entry_price: float, target_price: float, quantity: int, product_type: ProductType) -> float:
@@ -149,15 +149,16 @@ class DeterministicRiskEngine:
                 rules_triggered=["MAX_DRAWDOWN_BREACHED"]
             )
 
-        # Check 6: Max Concurrent Open Positions
+        # Check 6: Max Concurrent Open Positions (Strictly 1 Company Trade Policy)
         if len(portfolio.open_positions) >= self.max_open_positions:
+            holding = list(portfolio.open_positions.keys())
             return RiskVerdict(
                 action=RiskAction.VETOED,
                 symbol=proposal.symbol,
                 original_quantity=proposal.suggested_quantity,
                 approved_quantity=0,
                 approved_risk_amount=0.0,
-                reason=f"Max open positions ({self.max_open_positions}) reached",
+                reason=f"Single Company Trade Policy: Max open positions ({self.max_open_positions}) reached. Currently holding {holding}",
                 rules_triggered=["MAX_POSITIONS_REACHED"]
             )
 

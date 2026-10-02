@@ -824,7 +824,7 @@
       </div>
 
       <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--accent-cyan); background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-sm); padding: 7px 14px; font-family: var(--font-mono);">
-        <span>⚡ 100% Intraday (MIS)</span> &nbsp;|&nbsp; <span>🚀 5x Broker Margin</span> &nbsp;|&nbsp; <span>🎯 +18% Target</span> &nbsp;|&nbsp; <span>🛑 -5% Stop</span> &nbsp;|&nbsp; <span>⏱️ 15:15 IST Square-Off</span> &nbsp;|&nbsp; <span id="universeCount">50 Nifty stocks</span>
+        <span>⭐ Single Best Trade of the Day Policy</span> &nbsp;|&nbsp; <span>⚡ 100% Intraday (MIS)</span> &nbsp;|&nbsp; <span>🚀 5x Broker Margin</span> &nbsp;|&nbsp; <span>🎯 +18% Target</span> &nbsp;|&nbsp; <span>🛑 -5% Stop</span> &nbsp;|&nbsp; <span id="universeCount">50 Nifty stocks</span>
       </div>
 
       <div style="display: flex; gap: 10px;">
@@ -837,15 +837,46 @@
       </div>
     </div>
 
+    <!-- ★ Top Alpha Pick of the Day Card -->
+    <div id="topAlphaPickCard" style="display:none; background: linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(16,185,129,0.15) 100%); border: 1px solid rgba(245,158,11,0.45); border-radius: var(--radius-md); padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(245,158,11,0.12);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:#F59E0B; color:#000; font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; font-family:var(--font-mono); letter-spacing:0.5px;">★ #1 ALPHA PICK OF THE DAY</span>
+            <span style="font-size:11px; color:#10B981; font-family:var(--font-mono); font-weight:700;">SINGLE COMPANY TRADE POLICY (MAX PROFIT FOCUS)</span>
+          </div>
+          <h2 id="topPickSymbol" style="font-size:26px; font-weight:800; margin:6px 0 2px 0; color:#fff; letter-spacing:1px;">TATAMOTORS</h2>
+          <div id="topPickDetails" style="font-size:12px; color:var(--text-muted); font-family:var(--font-mono);">Automobile Sector · 90% Capital Allocated with 5x Broker Margin (20% Req)</div>
+        </div>
+        <div style="display:flex; gap:24px; text-align:right; flex-wrap:wrap;">
+          <div>
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-family:var(--font-mono);">Expected Profit</div>
+            <div id="topPickEV" style="font-size:22px; font-weight:800; color:var(--accent-green); font-family:var(--font-mono);">+17.4%</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-family:var(--font-mono);">5x Leveraged Return</div>
+            <div id="topPickLeveraged" style="font-size:22px; font-weight:800; color:var(--accent-cyan); font-family:var(--font-mono);">+87.1%</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-family:var(--font-mono);">Alpha Profit Score</div>
+            <div id="topPickScore" style="font-size:22px; font-weight:800; color:var(--accent-yellow); font-family:var(--font-mono);">101.8</div>
+          </div>
+          <div>
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-family:var(--font-mono);">Status</div>
+            <div id="topPickStatus" style="font-size:14px; font-weight:700; margin-top:4px;"><span class="badge-pill pill-green">TRADE PLACED</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Company Universe Analysis Table -->
     <div class="section-title" id="universeSection" style="display:none;">
-      <span>📊 Full Nifty 50 Universe Analysis</span>
+      <span>📊 Full Nifty 50 Universe Analysis (Ranked by Profit Potential)</span>
       <div style="display:flex; gap:16px; font-size:12px; font-family: var(--font-mono);">
         <span>Total: <strong id="uTotal" style="color:var(--text-main);">0</strong></span>
-        <span style="color:var(--accent-green);">BUY: <strong id="uBuy">0</strong></span>
-        <span style="color:var(--accent-red);">SELL: <strong id="uSell">0</strong></span>
-        <span style="color:var(--accent-yellow);">Trades Placed: <strong id="uTrades">0</strong></span>
-        <span style="color:var(--text-muted);">Skipped: <strong id="uSkip">0</strong></span>
+        <span style="color:var(--accent-yellow);">★ Top Pick: <strong id="uTopPickName">None</strong></span>
+        <span style="color:var(--accent-green);">Trades Placed: <strong id="uTrades">0</strong> (Max 1)</span>
+        <span style="color:var(--text-muted);">Held Back: <strong id="uSkip">0</strong></span>
       </div>
     </div>
     <div id="universePanel" style="display:none;" class="table-card">
@@ -855,6 +886,7 @@
             <th>Symbol</th>
             <th>Sector</th>
             <th>Price (₹)</th>
+            <th>Expected Profit (5x)</th>
             <th>📅 Daily (30%)</th>
             <th>🗓️ Monthly (40%)</th>
             <th>📈 Yearly (30%)</th>
@@ -867,7 +899,7 @@
           </tr>
         </thead>
         <tbody id="universeTableBody">
-          <tr><td colspan="12" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
+          <tr><td colspan="13" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1309,35 +1341,84 @@
 
     function updateUniverseTable(companies) {
       const tbody = document.getElementById('universeTableBody');
-      // Sort: TRADE first, then by win_prob desc
+
+      // Find top pick of the day
+      const topPick = companies.find(c => c.is_top_pick) || companies.find(c => c.action === 'TRADE') || (companies.length > 0 ? companies[0] : null);
+
+      if (topPick) {
+        const topCard = document.getElementById('topAlphaPickCard');
+        if (topCard) topCard.style.display = 'block';
+
+        const symEl = document.getElementById('topPickSymbol');
+        if (symEl) symEl.textContent = topPick.symbol;
+
+        const detEl = document.getElementById('topPickDetails');
+        if (detEl) detEl.textContent = `${topPick.sector} Sector · 90% Capital Allocated with 5x Broker Margin (20% Req)`;
+
+        const ev = topPick.expected_profit_pct !== undefined ? topPick.expected_profit_pct.toFixed(1) : '17.4';
+        const lev = topPick.leveraged_expected_profit_pct !== undefined ? topPick.leveraged_expected_profit_pct.toFixed(1) : '87.1';
+        const score = topPick.profit_potential_score !== undefined ? topPick.profit_potential_score.toFixed(1) : '101.8';
+
+        const evEl = document.getElementById('topPickEV');
+        if (evEl) evEl.textContent = `+${ev}%`;
+
+        const levEl = document.getElementById('topPickLeveraged');
+        if (levEl) levEl.textContent = `+${lev}%`;
+
+        const scEl = document.getElementById('topPickScore');
+        if (scEl) scEl.textContent = score;
+
+        const stEl = document.getElementById('topPickStatus');
+        if (stEl) {
+          stEl.innerHTML = topPick.action === 'TRADE' 
+            ? '<span class="badge-pill pill-green" style="font-size:12px;">★ TRADE PLACED</span>' 
+            : '<span class="badge-pill pill-yellow" style="font-size:12px;">★ TOP CANDIDATE</span>';
+        }
+
+        const nameEl = document.getElementById('uTopPickName');
+        if (nameEl) nameEl.textContent = topPick.symbol;
+      }
+
+      // Sort: Top Pick / TRADE first, then by profit_potential_score desc
       const sorted = [...companies].sort((a, b) => {
+        if (a.is_top_pick && !b.is_top_pick) return -1;
+        if (!a.is_top_pick && b.is_top_pick) return 1;
         if (a.action === 'TRADE' && b.action !== 'TRADE') return -1;
         if (b.action === 'TRADE' && a.action !== 'TRADE') return 1;
-        return (b.win_prob || 0) - (a.win_prob || 0);
+        return (b.profit_potential_score || b.win_prob || 0) - (a.profit_potential_score || a.win_prob || 0);
       });
 
-      const buyCount   = companies.filter(c => c.action === 'TRADE' && c.tech_direction === 'LONG').length;
-      const sellCount  = companies.filter(c => c.action === 'TRADE' && c.tech_direction === 'SHORT').length;
       const tradeCount = companies.filter(c => c.action === 'TRADE').length;
       const skipCount  = companies.filter(c => c.action !== 'TRADE').length;
 
       document.getElementById('uTotal').textContent = companies.length;
-      document.getElementById('uBuy').textContent   = buyCount;
-      document.getElementById('uSell').textContent  = sellCount;
       document.getElementById('uTrades').textContent = tradeCount;
       document.getElementById('uSkip').textContent  = skipCount;
       document.getElementById('universeCount').textContent = companies.length + ' companies scanned';
 
       tbody.innerHTML = sorted.map(c => {
+        const isTop       = c.is_top_pick || (topPick && topPick.symbol === c.symbol);
         const isTraded    = c.action === 'TRADE';
         const fundPill    = c.fund_direction === 'LONG' ? 'pill-green' : (c.fund_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
         const techPill    = c.tech_direction === 'LONG' ? 'pill-green' : (c.tech_direction === 'SHORT' ? 'pill-red' : 'pill-gray');
-        const actPill     = isTraded ? 'pill-green' : 'pill-gray';
+        
+        let actPillHtml = '';
+        if (isTraded && isTop) {
+          actPillHtml = '<span class="badge-pill" style="background:#F59E0B; color:#000; font-weight:800; font-size:11px;">★ TOP PICK (1st)</span>';
+        } else if (c.gate_passed) {
+          actPillHtml = '<span class="badge-pill pill-gray" style="font-size:10px;" title="Single Best Trade Policy: Held back for top profit pick">HELD (1 Pick)</span>';
+        } else {
+          actPillHtml = '<span class="badge-pill pill-gray" style="font-size:10px;">SKIP</span>';
+        }
+
         const gateIcon    = c.gate_passed ? '<span style="color:var(--accent-green); font-weight:700;">PASS</span>' : '<span style="color:var(--text-dim);">FAIL</span>';
         const winPct      = c.win_prob ? (c.win_prob * 100).toFixed(1) + '%' : '--';
         const winColor    = c.win_prob >= 0.68 ? 'var(--accent-green)' : (c.win_prob >= 0.55 ? 'var(--accent-yellow)' : 'var(--text-dim)');
-        const rowBg       = isTraded ? 'background:rgba(16,185,129,0.07);' : '';
+        const rowBg       = isTop ? 'background:rgba(245,158,11,0.08); border-left: 4px solid #F59E0B;' : (isTraded ? 'background:rgba(16,185,129,0.07);' : '');
         const px          = c.price ? '₹' + c.price.toLocaleString('en-IN') : '--';
+
+        const evVal       = c.expected_profit_pct !== undefined ? `+${c.expected_profit_pct.toFixed(1)}%` : '+17.4%';
+        const levVal      = c.leveraged_expected_profit_pct !== undefined ? `+${c.leveraged_expected_profit_pct.toFixed(1)}%` : '+87.1%';
 
         const dailySc     = c.fund_daily_score !== undefined ? c.fund_daily_score.toFixed(0) : '50';
         const monthlySc   = c.fund_monthly_score !== undefined ? c.fund_monthly_score.toFixed(0) : '50';
@@ -1349,9 +1430,10 @@
         const yearlyColor  = c.fund_yearly_score >= 60 ? 'var(--accent-purple)' : (c.fund_yearly_score <= 40 ? 'var(--accent-red)' : 'var(--text-muted)');
 
         return `<tr style="${rowBg}">
-          <td><strong style="color:${isTraded ? 'var(--accent-green)' : 'var(--text-main)'}">${c.symbol}</strong></td>
+          <td><strong style="color:${isTop ? '#F59E0B' : (isTraded ? 'var(--accent-green)' : 'var(--text-main)')}">${isTop ? '★ ' : ''}${c.symbol}</strong></td>
           <td style="font-size:11px; color:var(--text-muted);">${c.sector}</td>
           <td style="font-family:var(--font-mono); font-size:12px;">${px}</td>
+          <td style="font-family:var(--font-mono); font-size:11px;"><strong style="color:var(--accent-green);">${evVal}</strong> <span style="color:var(--accent-cyan); font-size:10px;">(${levVal})</span></td>
           <td><strong style="color:${dailyColor}; font-family:var(--font-mono);">${dailySc}</strong> <span style="font-size:10px; color:var(--text-dim);">/100</span></td>
           <td><strong style="color:${monthlyColor}; font-family:var(--font-mono);">${monthlySc}</strong> <span style="font-size:10px; color:var(--text-dim);">/100</span></td>
           <td><strong style="color:${yearlyColor}; font-family:var(--font-mono);">${yearlySc}</strong> <span style="font-size:10px; color:var(--text-dim);">/100</span></td>
@@ -1359,7 +1441,7 @@
           <td><span class="badge-pill ${techPill}">${c.tech_direction}</span></td>
           <td>${gateIcon}</td>
           <td style="color:${winColor}; font-weight:700; font-family:var(--font-mono);">${winPct}</td>
-          <td><span class="badge-pill ${actPill}">${c.action}</span></td>
+          <td>${actPillHtml}</td>
           <td>
             <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11px;" onclick="openFundModal('${c.symbol}')">
               🔍 View Intel

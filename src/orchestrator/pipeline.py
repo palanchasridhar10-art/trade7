@@ -44,6 +44,38 @@ class TradingOrchestrator:
         self.journal = journal
         self.config = config or {}
 
+    def compute_day_profit_potential(
+        self,
+        win_prob: float,
+        fund_score: float,
+        adx: float,
+        volume_ratio: float,
+        orderflow: Dict[str, Any],
+        target_pct: float = 18.0,
+        stop_pct: float = 5.0
+    ) -> Dict[str, float]:
+        """Calculates expected profit and alpha potential score for universe ranking."""
+        ev_pct = (win_prob * target_pct) - ((1.0 - win_prob) * stop_pct)
+        fund_factor = max(0.5, 0.7 + (fund_score / 100.0) * 0.6)  # Score 86 -> 1.216x
+        adx_factor = max(1.0, min(50.0, adx) / 25.0)             # ADX 32 -> 1.28x
+        vol_factor = max(1.0, min(2.5, volume_ratio))            # Vol 1.6x -> 1.6x
+
+        cvd = orderflow.get("cumulative_volume_delta", orderflow.get("cumulative_delta", 0))
+        bid_depth = orderflow.get("bid_depth_qty", 100000)
+        ask_depth = max(1, orderflow.get("ask_depth_qty", 100000))
+        imbalance = (bid_depth - ask_depth) / (bid_depth + ask_depth) if (bid_depth + ask_depth) > 0 else 0.0
+        of_factor = 1.0 + (0.20 if cvd > 0 else -0.10) + max(-0.15, min(0.20, imbalance * 0.5))
+
+        alpha_score = ev_pct * fund_factor * adx_factor * vol_factor * of_factor
+        return {
+            "expected_profit_pct": round(ev_pct, 2),
+            "leveraged_expected_profit_pct": round(ev_pct * 5.0, 2),  # 5x broker margin leverage
+            "day_profit_potential_score": round(alpha_score, 2),
+            "fund_factor": round(fund_factor, 3),
+            "momentum_factor": round(adx_factor * vol_factor, 3),
+            "orderflow_factor": round(of_factor, 3)
+        }
+
     def run_cycle_for_symbol(
         self,
         symbol: str,
@@ -53,7 +85,8 @@ class TradingOrchestrator:
         fundamentals: CompanyFundamentals,
         technical_inputs: Dict[str, Any],
         current_time: Optional[datetime] = None,
-        enforce_timing: bool = True
+        enforce_timing: bool = True,
+        execute_order: bool = True
     ) -> Dict[str, Any]:
         """Execute one complete decision cycle for a given symbol."""
         now = current_time or NSECalendar.get_ist_now()
@@ -114,6 +147,16 @@ class TradingOrchestrator:
             enforce_timing=enforce_timing
         )
 
+        # Calculate Day Profit Potential
+        fund_composite = fund_signal.features.get("fund_score", 50.0)
+        profit_metrics = self.compute_day_profit_potential(
+            win_prob=tech_signal.confidence,
+            fund_score=fund_composite,
+            adx=technical_inputs.get("adx", 20.0),
+            volume_ratio=technical_inputs.get("volume_ratio", 1.0),
+            orderflow=technical_inputs.get("orderflow") or {}
+        )
+
         # Step 5: Execution Decision
         action = "NO_TRADE"
         reason = "Consensus not reached"
@@ -124,50 +167,62 @@ class TradingOrchestrator:
         elif risk_verdict and risk_verdict.action == RiskAction.VETOED:
             reason = f"Risk Engine Veto: {risk_verdict.reason}"
         elif risk_verdict and risk_verdict.approved_quantity > 0:
-            action = "TRADE"
-            reason = f"Approved ({risk_verdict.action.value}) {risk_verdict.approved_quantity} units. Risk: ₹{risk_verdict.approved_risk_amount:,.2f}"
+            if execute_order:
+                action = "TRADE"
+                reason = f"Approved ({risk_verdict.action.value}) {risk_verdict.approved_quantity} units. Risk: ₹{risk_verdict.approved_risk_amount:,.2f}"
 
-            # Step 6: Submit to Broker — passes sector for position tracking
-            executed_order = self.broker.submit_bracket_order(
+                # Step 6: Submit to Broker — passes sector for position tracking
+                executed_order = self.broker.submit_bracket_order(
+                    symbol=symbol,
+                    side=proposal.side.value,
+                    quantity=risk_verdict.approved_quantity,
+                    entry_price=proposal.entry_price,
+                    stop_loss=proposal.stop_loss,
+                    target_price=proposal.target_price,
+                    sector=sector
+                )
+            else:
+                action = "QUALIFIED_CANDIDATE"
+                reason = f"Candidate approved: {risk_verdict.approved_quantity} units with expected profit {profit_metrics['expected_profit_pct']}%"
+
+        # Step 7: Record Audit Trail to Memory Journal (only when executed directly)
+        if execute_order:
+            self.journal.record_decision(
+                decision_id=decision_id,
+                cycle_id=cycle_id,
                 symbol=symbol,
-                side=proposal.side.value,
-                quantity=risk_verdict.approved_quantity,
-                entry_price=proposal.entry_price,
-                stop_loss=proposal.stop_loss,
-                target_price=proposal.target_price,
-                sector=sector
+                fund_signal=fund_signal,
+                tech_signal=tech_signal,
+                consensus_reached=consensus.consensus_reached,
+                risk_verdict=risk_verdict,
+                action=action,
+                reason=reason
             )
-
-        # Step 7: Record Audit Trail to Memory Journal
-        self.journal.record_decision(
-            decision_id=decision_id,
-            cycle_id=cycle_id,
-            symbol=symbol,
-            fund_signal=fund_signal,
-            tech_signal=tech_signal,
-            consensus_reached=consensus.consensus_reached,
-            risk_verdict=risk_verdict,
-            action=action,
-            reason=reason
-        )
 
         return {
             "cycle_id": cycle_id,
+            "decision_id": decision_id,
             "symbol": symbol,
+            "sector": sector,
             "fund_direction": fund_signal.direction.value,
             "fund_confidence": fund_signal.confidence,
-            "fund_score": fund_signal.features.get("fund_score", 50.0),
+            "fund_score": fund_composite,
             "fund_daily_score": fund_signal.features.get("daily_score", 50.0),
             "fund_monthly_score": fund_signal.features.get("monthly_score", 50.0),
             "fund_yearly_score": fund_signal.features.get("yearly_score", 50.0),
             "fund_features": fund_signal.features,
             "fund_rationale": fund_signal.rationale,
+            "fund_signal": fund_signal,
             "tech_direction": tech_signal.direction.value,
             "tech_confidence": tech_signal.confidence,
+            "tech_signal": tech_signal,
             "consensus_reached": consensus.consensus_reached,
             "action": action,
             "reason": reason,
             "order": executed_order.model_dump() if executed_order else None,
+            "proposal": proposal,
+            "risk_verdict": risk_verdict,
+            "profit_metrics": profit_metrics,
             "features": tech_signal.features,
             "orderflow": {
                 "orderflow_score": tech_signal.features.get("orderflow_score", 0.0),
@@ -179,3 +234,40 @@ class TradingOrchestrator:
             },
             "tech_rationale": tech_signal.rationale
         }
+
+    def execute_approved_trade(
+        self,
+        symbol: str,
+        sector: str,
+        proposal: TradeProposal,
+        risk_verdict: RiskVerdict,
+        fund_signal: FundamentalSignal,
+        tech_signal: TechnicalSignal,
+        cycle_id: str,
+        decision_id: str
+    ) -> Optional[Order]:
+        """Submits an approved proposal for execution to the broker and logs to the journal."""
+        executed_order = self.broker.submit_bracket_order(
+            symbol=symbol,
+            side=proposal.side.value,
+            quantity=risk_verdict.approved_quantity,
+            entry_price=proposal.entry_price,
+            stop_loss=proposal.stop_loss,
+            target_price=proposal.target_price,
+            sector=sector
+        )
+
+        reason = f"Approved single top profit trade ({risk_verdict.action.value}) {risk_verdict.approved_quantity} units. Risk: ₹{risk_verdict.approved_risk_amount:,.2f}"
+
+        self.journal.record_decision(
+            decision_id=decision_id,
+            cycle_id=cycle_id,
+            symbol=symbol,
+            fund_signal=fund_signal,
+            tech_signal=tech_signal,
+            consensus_reached=True,
+            risk_verdict=risk_verdict,
+            action="TRADE",
+            reason=reason
+        )
+        return executed_order
