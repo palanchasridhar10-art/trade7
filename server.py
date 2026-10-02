@@ -152,8 +152,19 @@ def auto_trading_loop():
             time.sleep(5)
             continue
 
+        now_ist = NSECalendar.get_ist_now()
+        # Enforce Intraday EOD Cut-Off: Auto square-off all MIS positions at 15:15 IST
+        if NSECalendar.should_square_off_mis(now_ist):
+            print("[AUTO-TRADE] EOD Cut-off reached (15:15 IST) — squaring off all open Intraday MIS positions...")
+            if active_broker:
+                closed = active_broker.square_off_all_mis(reason="EOD_MIS_SQUAREOFF")
+                if closed:
+                    print(f"[AUTO-TRADE] Successfully squared off {len(closed)} intraday MIS positions at market close.")
+            time.sleep(30)
+            continue
+
         scan_count += 1
-        print(f"[AUTO-TRADE] Scan #{scan_count} — checking {len(AUTO_WATCHLIST)} symbols...")
+        print(f"[AUTO-TRADE] Scan #{scan_count} — checking {len(AUTO_WATCHLIST)} symbols (Intraday MIS · 5x Broker Margin)...")
 
         trades_placed = 0
         for symbol in AUTO_WATCHLIST:

@@ -70,6 +70,18 @@ class DeterministicRiskEngine:
         now = current_time or NSECalendar.get_ist_now()
         rules_triggered = []
 
+        # Check 0: Strict Intraday Requirement — Only MIS with 5x Broker Margin Permitted
+        if proposal.product_type != ProductType.MIS:
+            return RiskVerdict(
+                action=RiskAction.VETOED,
+                symbol=proposal.symbol,
+                original_quantity=proposal.suggested_quantity,
+                approved_quantity=0,
+                approved_risk_amount=0.0,
+                reason="Policy violation: all trades must be strictly Intraday (MIS) utilizing 5x broker margin",
+                rules_triggered=["NON_INTRADAY_PRODUCT_REJECTED"]
+            )
+
         # Check 1: Emergency Kill Switch
         if portfolio.is_kill_switch_active:
             return RiskVerdict(
