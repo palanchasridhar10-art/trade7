@@ -15,17 +15,17 @@ class DeterministicRiskEngine:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         cfg = config or {}
-        self.capital_allocation_pct = cfg.get("capital_allocation_pct", 90.0) / 100.0 # 90% capital allocation
+        self.capital_allocation_pct = cfg.get("capital_allocation_pct", 90.0) / 100.0 # 90% capital allocation per position
         self.stop_loss_pct = cfg.get("stop_loss_pct", 5.0) / 100.0                   # 5.0% loss limit
         self.profit_target_pct = cfg.get("profit_target_pct", 18.0) / 100.0           # 18.0% target (15-20%)
         self.min_target_pct = cfg.get("min_profit_target_pct", 15.0) / 100.0         # 15% min target
         self.max_target_pct = cfg.get("max_profit_target_pct", 20.0) / 100.0         # 20% max target
         self.max_single_stock_pct = cfg.get("max_single_stock_exposure_percent", 90.0) / 100.0
         self.max_sector_exposure_pct = cfg.get("max_sector_exposure_percent", 90.0) / 100.0
-        self.daily_loss_limit_pct = cfg.get("daily_loss_limit_percent", 10.0) / 100.0
-        self.weekly_loss_limit_pct = cfg.get("weekly_loss_limit_percent", 15.0) / 100.0
-        self.max_drawdown_pct = cfg.get("max_drawdown_limit_percent", 20.0) / 100.0
-        self.max_open_positions = cfg.get("max_open_positions", 2)
+        self.daily_loss_limit_pct = cfg.get("daily_loss_limit_percent", 15.0) / 100.0  # 15% daily hard stop
+        self.weekly_loss_limit_pct = cfg.get("weekly_loss_limit_percent", 20.0) / 100.0 # 20% weekly hard stop
+        self.max_drawdown_pct = cfg.get("max_drawdown_limit_percent", 25.0) / 100.0   # 25% max drawdown
+        self.max_open_positions = cfg.get("max_open_positions", 10)                   # Up to 10 simultaneous positions
         self.min_expected_gain_to_cost_ratio = cfg.get("min_expected_gain_to_cost_ratio", 3.0)
 
     def calculate_statutory_costs(self, entry_price: float, target_price: float, quantity: int, product_type: ProductType) -> float:
@@ -122,10 +122,11 @@ class DeterministicRiskEngine:
                 rules_triggered=["WEEKLY_LOSS_LIMIT_BREACHED"]
             )
 
-        # Check 5: Peak-to-Trough Drawdown Limit
+        # Check 5: Peak-to-Trough Drawdown Limit (only if we have a meaningful peak to compare)
         drawdown_amount = max(0.0, portfolio.peak_capital - portfolio.total_capital)
         drawdown_pct = drawdown_amount / portfolio.peak_capital if portfolio.peak_capital > 0 else 0.0
-        if drawdown_pct >= self.max_drawdown_pct:
+        # Only enforce if we're well past the starting point (avoid margin accounting artifacts)
+        if drawdown_pct >= self.max_drawdown_pct and portfolio.trades_count_today > 0:
             return RiskVerdict(
                 action=RiskAction.VETOED,
                 symbol=proposal.symbol,

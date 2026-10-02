@@ -74,17 +74,46 @@ class PaperBroker(BaseBrokerAdapter):
         target_price: float,
         sector: str = "GENERAL"
     ) -> Order:
-        """Simulate order execution with slippage applied to fill price."""
+        """Simulate order execution with slippage applied to fill price.
+        
+        MIS margin requirement: 20% of position value (5x SEBI leverage).
+        Duplicate position guard: if symbol already open, skip.
+        """
+        # Guard: don't open duplicate position in same symbol
+        if symbol in self.positions:
+            import uuid as _uuid
+            now = datetime.now()
+            return Order(
+                order_id=f"DUP-{symbol}-{now.strftime('%H%M%S')}",
+                client_order_id=f"DUP-{symbol}",
+                symbol=symbol,
+                side=OrderSide(side),
+                product_type=ProductType.MIS,
+                quantity=0,
+                price=entry_price,
+                status=OrderStatus.REJECTED,
+                created_at=now
+            )
+
         now = datetime.now()
         order_id = str(uuid.uuid4())
         client_id = f"CL-{order_id[:8]}"
         order_side = OrderSide(side)
 
-        # Apply slippage
+        # Apply slippage to fill price
         if order_side == OrderSide.BUY:
             fill_price = round(entry_price * (1.0 + self.slippage_pct), 2)
         else:
             fill_price = round(entry_price * (1.0 - self.slippage_pct), 2)
+
+        # MIS intraday margin: 20% of position value (SEBI 5x leverage)
+        position_value = fill_price * quantity
+        margin_required = position_value * 0.20  # 20% MIS margin
+
+        # If insufficient cash for even the margin, reduce qty to what we can afford
+        if margin_required > self.capital and self.capital > 0:
+            quantity = max(1, int(self.capital / (fill_price * 0.20)))
+            margin_required = fill_price * quantity * 0.20
 
         order = Order(
             order_id=order_id,
@@ -100,6 +129,9 @@ class PaperBroker(BaseBrokerAdapter):
             average_fill_price=fill_price
         )
         self.orders[order_id] = order
+
+        # Deduct MIS margin from available cash (not full position value)
+        self.capital -= margin_required
 
         # Create active position
         pos_id = str(uuid.uuid4())
@@ -192,6 +224,9 @@ class PaperBroker(BaseBrokerAdapter):
         r_multiple = round(gross_pnl / risk_amount, 2) if risk_amount > 0 else 0.0
 
         self.capital += net_pnl
+        # Refund MIS margin on close (20% of entry value)
+        margin_refund = pos.entry_price * pos.quantity * 0.20
+        self.capital += margin_refund
         self.daily_realized_pnl += net_pnl
 
         record = TradeRecord(

@@ -25,9 +25,9 @@ class ExecutionAgent:
         self.risk_engine = risk_engine
         cfg = config or {}
         consensus_cfg = cfg.get("consensus", {})
-        self.min_fund_conf = consensus_cfg.get("min_fund_confidence", 0.40)
+        self.min_fund_conf = consensus_cfg.get("min_fund_confidence", 0.30)   # Lowered: tech gate is primary
         self.min_tech_conf = consensus_cfg.get("min_tech_confidence", 0.60)
-        self.min_combined_conviction = consensus_cfg.get("min_combined_conviction", 0.65)
+        self.min_combined_conviction = consensus_cfg.get("min_combined_conviction", 0.60)  # Slightly relaxed
         self.w_fund = consensus_cfg.get("fund_weight", 0.40)
         self.w_tech = consensus_cfg.get("tech_weight", 0.60)
 

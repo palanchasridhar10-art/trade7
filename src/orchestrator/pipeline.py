@@ -127,14 +127,15 @@ class TradingOrchestrator:
             action = "TRADE"
             reason = f"Approved ({risk_verdict.action.value}) {risk_verdict.approved_quantity} units. Risk: ₹{risk_verdict.approved_risk_amount:,.2f}"
 
-            # Step 6: Submit to Broker
+            # Step 6: Submit to Broker — passes sector for position tracking
             executed_order = self.broker.submit_bracket_order(
                 symbol=symbol,
                 side=proposal.side.value,
                 quantity=risk_verdict.approved_quantity,
                 entry_price=proposal.entry_price,
                 stop_loss=proposal.stop_loss,
-                target_price=proposal.target_price
+                target_price=proposal.target_price,
+                sector=sector
             )
 
         # Step 7: Record Audit Trail to Memory Journal
