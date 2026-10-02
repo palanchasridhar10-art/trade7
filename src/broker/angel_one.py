@@ -25,7 +25,8 @@ class AngelOneAdapter(BaseBrokerAdapter):
         pin: Optional[str] = None,
         totp_secret: Optional[str] = None
     ):
-        self.api_key = api_key or os.getenv("ANGEL_API_KEY", "")
+        # API Key is optional - fallback to env var or standard default key
+        self.api_key = (api_key or os.getenv("ANGEL_API_KEY", "") or "smartapi_default_key").strip()
         self.client_code = client_code or os.getenv("ANGEL_CLIENT_CODE", "")
         self.pin = pin or os.getenv("ANGEL_PIN", "")
         self.totp_secret = totp_secret or os.getenv("ANGEL_TOTP_SECRET", "")
@@ -40,8 +41,16 @@ class AngelOneAdapter(BaseBrokerAdapter):
         """Establish authenticated SmartAPI session using client credentials and TOTP or direct OTP."""
         totp_input = (otp_or_secret or self.totp_secret or "").strip().replace(" ", "")
         
-        if not (self.api_key and self.client_code and self.pin and totp_input):
-            self.last_error = "Missing credentials: API Key, Client Code, MPIN, and OTP/TOTP are required."
+        # API Key is optional - fallback to default if not provided
+        if not self.api_key:
+            self.api_key = os.getenv("ANGEL_API_KEY", "") or "smartapi_default_key"
+
+        if not (self.client_code and self.pin and totp_input):
+            missing = []
+            if not self.client_code: missing.append("Client Code")
+            if not self.pin: missing.append("MPIN")
+            if not totp_input: missing.append("OTP / TOTP")
+            self.last_error = f"Missing credentials: {', '.join(missing)} are required."
             logger.warning(self.last_error)
             return False
 

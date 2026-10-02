@@ -158,15 +158,14 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
             use_env = payload.get("use_env", False)
 
             if mode == "live":
-                # If use_env or fields left blank, pull from environment variables automatically
-                api_key = (payload.get("api_key", "").strip() or os.getenv("ANGEL_API_KEY", "")).strip()
+                # API Key is strictly optional - fall back to env var or standard default key
+                api_key = (payload.get("api_key", "").strip() or os.getenv("ANGEL_API_KEY", "") or "smartapi_default_key").strip()
                 client_code = (payload.get("client_code", "").strip() or os.getenv("ANGEL_CLIENT_CODE", "")).strip()
                 pin = (payload.get("pin", "").strip() or os.getenv("ANGEL_PIN", "")).strip()
                 totp_input = (payload.get("totp_secret", "").strip() or payload.get("otp", "").strip() or os.getenv("ANGEL_TOTP_SECRET", "")).strip()
 
-                if not (api_key and client_code and pin and totp_input):
+                if not (client_code and pin and totp_input):
                     missing = []
-                    if not api_key: missing.append("API Key")
                     if not client_code: missing.append("Client Code")
                     if not pin: missing.append("MPIN")
                     if not totp_input: missing.append("OTP / TOTP")

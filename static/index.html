@@ -400,11 +400,12 @@
 
         <!-- Advanced Options Toggle -->
         <div style="margin-bottom: 16px;">
-          <span class="help-link" onclick="toggleAdvanced()" style="font-size: 12px; color: var(--text-muted);">
+          <span class="help-link" onclick="toggleAdvanced()" style="font-size: 12px; color: var(--text-muted); cursor: pointer;">
             ⚙️ <span id="advancedToggleText">Custom SmartAPI Key (Optional)</span>
           </span>
           <div id="advancedFields" style="display: none; margin-top: 8px;">
-            <input type="text" id="apiKey" class="form-input" placeholder="Leave empty to use server default key">
+            <input type="text" id="apiKey" class="form-input" placeholder="Optional: Leave blank to use default SmartAPI key">
+            <span style="font-size: 11px; color: var(--text-dim); margin-top: 4px; display: block;">API Key is optional. You only need Client ID, MPIN, and 6-digit OTP to connect.</span>
           </div>
         </div>
 
