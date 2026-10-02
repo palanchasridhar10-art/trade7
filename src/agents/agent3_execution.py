@@ -159,13 +159,15 @@ class ExecutionAgent:
         if risk_per_unit <= 0.0 or tech_signal.kelly_fraction <= 0.0:
             return None
 
-        # Suggested quantity calculated from Kelly fraction and capital allocation
-        suggested_risk = portfolio.total_capital * tech_signal.kelly_fraction
-        suggested_qty = int(suggested_risk / risk_per_unit)
+        # Suggested quantity calculated to deploy 90% of trading capital
+        allocated_capital = portfolio.total_capital * 0.90
+        suggested_qty = int(allocated_capital / tech_signal.entry) if tech_signal.entry > 0 else 0
 
-        # If capital is insufficient to purchase even 1 unit within risk budget, return None
+        # If capital is insufficient to purchase even 1 unit, return None
         if suggested_qty <= 0:
             return None
+
+        suggested_risk = suggested_qty * risk_per_unit
 
         return TradeProposal(
             proposal_id=str(uuid.uuid4()),

@@ -159,32 +159,35 @@ class TechnicalAnalystAgent:
         raw_confidence = min(1.0, abs(tech_score))
         calibrated_p = self.calibrate_probability(raw_confidence)
 
-        # Dynamic Bracket Construction using ATR(14)
-        atr_buffer = max(1.0, atr14)
+        # Fixed Target & Stop Limits per User Specification:
+        # Profit Target: 15% to 20% (configured at 18.0%)
+        # Stop Loss: strictly 5.0% (auto square-off on reach)
+        profit_target_pct = 0.18 # 18% target (within 15% - 20% range)
+        stop_loss_pct = 0.05     # 5% max loss limit
+
         if direction == SignalDirection.LONG:
             entry = current_price
-            stop_loss = round(current_price - (1.5 * atr_buffer), 2)
-            target = round(current_price + (3.0 * atr_buffer), 2) # 2:1 R:R
+            stop_loss = round(current_price * (1.0 - stop_loss_pct), 2) # -5%
+            target = round(current_price * (1.0 + profit_target_pct), 2) # +18%
         elif direction == SignalDirection.SHORT:
             entry = current_price
-            stop_loss = round(current_price + (1.5 * atr_buffer), 2)
-            target = round(current_price - (3.0 * atr_buffer), 2) # 2:1 R:R
+            stop_loss = round(current_price * (1.0 + stop_loss_pct), 2) # -5%
+            target = round(current_price * (1.0 - profit_target_pct), 2) # +18%
         else:
             entry = current_price
-            stop_loss = round(current_price - atr_buffer, 2)
-            target = round(current_price + atr_buffer, 2)
+            stop_loss = round(current_price * 0.95, 2)
+            target = round(current_price * 1.18, 2)
 
-        # Fractional Kelly sizing
-        kelly_result = self.compute_fractional_kelly(
-            entry=entry,
-            stop_loss=stop_loss,
-            target=target,
-            calibrated_p=calibrated_p,
-            portfolio_capital=portfolio_capital
-        )
+        # 90% Trading Capital Allocation to Buy or Sell
+        allocated_capital = portfolio_capital * 0.90
+        quantity = int(allocated_capital / entry) if entry > 0 else 0
+        risk_per_unit = abs(entry - stop_loss)
+        gain_per_unit = abs(target - entry)
+        payoff_ratio = round(gain_per_unit / risk_per_unit, 2) if risk_per_unit > 0 else 3.60
+        position_val = round(quantity * entry, 2)
 
-        position_val = round(kelly_result["quantity"] * entry, 2)
-        rationale.append(f"Kelly Fraction: {kelly_result['kelly_fraction']*100:.2f}% | Calibrated Win Prob: {calibrated_p*100:.1f}%.")
+        rationale.append(f"Capital Allocation: 90% (₹{allocated_capital:,.2f}) -> {quantity} units.")
+        rationale.append(f"Target: +{profit_target_pct*100:.1f}% (₹{target:,.2f}) | Stop Loss: -{stop_loss_pct*100:.1f}% (₹{stop_loss:,.2f}).")
 
         return TechnicalSignal(
             symbol=symbol,
@@ -205,7 +208,7 @@ class TechnicalAnalystAgent:
             stop_loss=stop_loss,
             target=target,
             win_prob=round(calibrated_p, 3),
-            payoff_ratio=kelly_result["payoff_ratio"],
-            kelly_fraction=kelly_result["kelly_fraction"],
+            payoff_ratio=payoff_ratio,
+            kelly_fraction=0.90,
             suggested_position_value=position_val
         )

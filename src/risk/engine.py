@@ -15,14 +15,17 @@ class DeterministicRiskEngine:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         cfg = config or {}
-        self.max_risk_per_trade_pct = cfg.get("max_risk_per_trade_percent", 1.0) / 100.0
-        self.hard_risk_cap_pct = cfg.get("hard_risk_cap_percent", 2.0) / 100.0
-        self.max_open_positions = cfg.get("max_open_positions", 5)
-        self.max_sector_exposure_pct = cfg.get("max_sector_exposure_percent", 25.0) / 100.0
-        self.max_single_stock_pct = cfg.get("max_single_stock_exposure_percent", 10.0) / 100.0
-        self.daily_loss_limit_pct = cfg.get("daily_loss_limit_percent", 2.0) / 100.0
-        self.weekly_loss_limit_pct = cfg.get("weekly_loss_limit_percent", 5.0) / 100.0
-        self.max_drawdown_pct = cfg.get("max_drawdown_limit_percent", 12.0) / 100.0
+        self.capital_allocation_pct = cfg.get("capital_allocation_pct", 90.0) / 100.0 # 90% capital allocation
+        self.stop_loss_pct = cfg.get("stop_loss_pct", 5.0) / 100.0                   # 5.0% loss limit
+        self.profit_target_pct = cfg.get("profit_target_pct", 18.0) / 100.0           # 18.0% target (15-20%)
+        self.min_target_pct = cfg.get("min_profit_target_pct", 15.0) / 100.0         # 15% min target
+        self.max_target_pct = cfg.get("max_profit_target_pct", 20.0) / 100.0         # 20% max target
+        self.max_single_stock_pct = cfg.get("max_single_stock_exposure_percent", 90.0) / 100.0
+        self.max_sector_exposure_pct = cfg.get("max_sector_exposure_percent", 90.0) / 100.0
+        self.daily_loss_limit_pct = cfg.get("daily_loss_limit_percent", 10.0) / 100.0
+        self.weekly_loss_limit_pct = cfg.get("weekly_loss_limit_percent", 15.0) / 100.0
+        self.max_drawdown_pct = cfg.get("max_drawdown_limit_percent", 20.0) / 100.0
+        self.max_open_positions = cfg.get("max_open_positions", 2)
         self.min_expected_gain_to_cost_ratio = cfg.get("min_expected_gain_to_cost_ratio", 3.0)
 
     def calculate_statutory_costs(self, entry_price: float, target_price: float, quantity: int, product_type: ProductType) -> float:
@@ -169,7 +172,7 @@ class DeterministicRiskEngine:
                 rules_triggered=["ILLIQUID_STOCK_REJECTED"]
             )
 
-        # Check 9: Quantity Sizing & Exposure Hard Caps Based on Capital
+        # Check 9: Quantity Sizing Based on 90% Capital Allocation
         risk_per_unit = abs(proposal.entry_price - proposal.stop_loss)
         if risk_per_unit <= 0.0:
             return RiskVerdict(
@@ -182,22 +185,11 @@ class DeterministicRiskEngine:
                 rules_triggered=["ZERO_RISK_PER_UNIT"]
             )
 
-        # 1. Capital Risk Budget (Max 1.0% to 2.0% of portfolio capital)
-        max_allowed_risk = portfolio.total_capital * self.max_risk_per_trade_pct
-        hard_risk_cap = portfolio.total_capital * self.hard_risk_cap_pct
-        target_risk = min(max_allowed_risk, hard_risk_cap)
-        max_qty_by_risk = int(target_risk / risk_per_unit)
+        # 1. 90% Trading Capital Allocation to Buy or Sell
+        target_capital = portfolio.total_capital * self.capital_allocation_pct
+        max_qty_by_capital = int(target_capital / proposal.entry_price)
 
-        # 2. Single Stock Capital Cap (Max 10% of portfolio capital in one name)
-        max_stock_capital = portfolio.total_capital * self.max_single_stock_pct
-        max_qty_by_stock_cap = int(max_stock_capital / proposal.entry_price)
-
-        # 3. Sector Capital Cap (Max 25% of portfolio capital in one sector)
-        current_sector_alloc = portfolio.sector_exposure.get(proposal.sector, 0.0)
-        remaining_sector_capital = max(0.0, (portfolio.total_capital * self.max_sector_exposure_pct) - current_sector_alloc)
-        max_qty_by_sector_cap = int(remaining_sector_capital / proposal.entry_price)
-
-        # 4. Available Cash & Margin Limit
+        # 2. Available Cash & Margin Limit
         # For Indian intraday MIS, SEBI margin is 20% (5x leverage); CNC delivery is 100%
         margin_requirement_pct = 0.20 if proposal.product_type == ProductType.MIS else 1.0
         margin_per_unit = proposal.entry_price * margin_requirement_pct
@@ -215,12 +207,10 @@ class DeterministicRiskEngine:
 
         max_qty_by_available_cash = int(portfolio.available_cash / margin_per_unit)
 
-        # Final approved quantity is the strictest minimum across all capital constraints
+        # Final approved quantity deploys 90% of trading capital
         approved_qty = min(
             proposal.suggested_quantity,
-            max_qty_by_risk,
-            max_qty_by_stock_cap,
-            max_qty_by_sector_cap,
+            max_qty_by_capital,
             max_qty_by_available_cash
         )
 
@@ -231,7 +221,7 @@ class DeterministicRiskEngine:
                 original_quantity=proposal.suggested_quantity,
                 approved_quantity=0,
                 approved_risk_amount=0.0,
-                reason="Quantity clamped to 0: order value exceeds available cash or capital exposure caps",
+                reason="Quantity clamped to 0: order value exceeds available cash or capital allocation limits",
                 rules_triggered=["EXPOSURE_CAP_CLAMP_ZERO"]
             )
 

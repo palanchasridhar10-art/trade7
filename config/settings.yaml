@@ -61,10 +61,13 @@ agent2:
   thresholds:
     long_score: 0.60
     short_score: -0.60
-  kelly:
-    multiplier: 0.25 # Quarter-Kelly
-    max_risk_cap: 0.015 # 1.5% max capital risk per trade
-    min_payoff_ratio: 1.50
+  sizing:
+    capital_allocation_pct: 90.0 # Allocate 90% of trading capital per trade
+    stop_loss_pct: 5.0 # Strictly 5% loss limit
+    profit_target_pct: 18.0 # 15% to 20% profit target (default 18%)
+    min_profit_target_pct: 15.0
+    max_profit_target_pct: 20.0
+    min_payoff_ratio: 3.00 # 18% / 5% = 3.6 R:R
     min_calibrated_prob: 0.55
 
 agent3:

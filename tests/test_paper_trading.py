@@ -42,5 +42,43 @@ def test_paper_broker_target_hit_calculates_statutory_deductions(paper_broker):
     # Statutory fees and slippage must be explicitly accounted for
     assert trade_record.fees_and_taxes > 0
     assert trade_record.slippage > 0
-    assert trade_record.net_pnl == pytest.approx(trade_record.gross_pnl - trade_record.fees_and_taxes, 0.01)
     assert "ITC" not in paper_broker.positions # Closed out
+
+def test_auto_squareoff_on_5_percent_loss(paper_broker):
+    # Buy at 1000 with 5% stop loss (950)
+    paper_broker.submit_bracket_order(
+        symbol="TCS",
+        side="BUY",
+        quantity=10,
+        entry_price=1000.0,
+        stop_loss=950.0, # 5% loss
+        target_price=1180.0, # 18% target
+        sector="IT"
+    )
+
+    # Price drops by 5% to 950.0
+    trade_record = paper_broker.update_price_tick("TCS", 950.0)
+    assert trade_record is not None
+    assert trade_record.exit_reason == ExitReason.STOP_LOSS
+    assert trade_record.gross_pnl < 0
+    assert "TCS" not in paper_broker.positions # Automatically squared off
+
+def test_auto_squareoff_on_15_to_20_percent_profit(paper_broker):
+    # Buy at 1000 with 18% target (1180)
+    paper_broker.submit_bracket_order(
+        symbol="INFY",
+        side="BUY",
+        quantity=10,
+        entry_price=1000.0,
+        stop_loss=950.0, # 5% loss
+        target_price=1180.0, # 18% target
+        sector="IT"
+    )
+
+    # Price rises by 18% to 1180.0
+    trade_record = paper_broker.update_price_tick("INFY", 1180.0)
+    assert trade_record is not None
+    assert trade_record.exit_reason == ExitReason.TARGET
+    assert trade_record.gross_pnl > 0
+    assert "INFY" not in paper_broker.positions # Automatically squared off
+

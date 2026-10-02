@@ -266,6 +266,38 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
             else:
                 self._send_json(400, {"status": "error", "message": "No active broker session."})
 
+        elif self.path == "/api/simulate-tick":
+            if not active_broker:
+                self._send_json(400, {"status": "error", "message": "No active broker session."})
+                return
+            symbol = payload.get("symbol")
+            price = float(payload.get("price", 0.0))
+            if not symbol or price <= 0:
+                self._send_json(400, {"status": "error", "message": "Invalid symbol or price."})
+                return
+
+            trade = None
+            if hasattr(active_broker, "update_price_tick"):
+                trade = active_broker.update_price_tick(symbol, price)
+
+            if trade:
+                reason_str = trade.exit_reason.value if hasattr(trade.exit_reason, "value") else str(trade.exit_reason)
+                self._send_json(200, {
+                    "status": "success",
+                    "action": "AUTO_SQUAREOFF",
+                    "exit_reason": reason_str,
+                    "exit_price": trade.exit_price,
+                    "net_pnl": trade.net_pnl,
+                    "gross_pnl": trade.gross_pnl,
+                    "message": f"Position {symbol} automatically squared off on reaching limits! Reason: {reason_str} | Net PnL: ₹{trade.net_pnl:,.2f}"
+                })
+            else:
+                self._send_json(200, {
+                    "status": "success",
+                    "action": "PRICE_UPDATED",
+                    "message": f"Updated {symbol} price to ₹{price:.2f}. Limits not breached."
+                })
+
         else:
             self._send_json(404, {"error": "Not Found"})
 

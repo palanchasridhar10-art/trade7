@@ -522,7 +522,7 @@
         <div class="agent-header">
           <div class="agent-title">
             <span>Agent 2</span>
-            <span class="agent-tag">Technical + Kelly</span>
+            <span class="agent-tag">Technical + Sizing</span>
           </div>
           <span id="agent2Badge" class="badge-pill pill-green">CONFLUENCE</span>
         </div>
@@ -531,16 +531,16 @@
           <span class="agent-stat-value" id="statTechScore">+0.95 / 1.0</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Trend Structure</span>
-          <span class="agent-stat-value">EMA Bullish (ADX 31.5)</span>
+          <span class="agent-stat-label">Capital Allocation</span>
+          <span class="agent-stat-value" style="color: var(--accent-cyan); font-weight: 700;">90.0% Trading Capital</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Calibrated Win Prob (p)</span>
-          <span class="agent-stat-value">64.0%</span>
+          <span class="agent-stat-label">Profit Target</span>
+          <span class="agent-stat-value" style="color: var(--accent-green); font-weight: 700;">+18.0% (15% - 20% Range)</span>
         </div>
         <div class="agent-stat-row">
-          <span class="agent-stat-label">Quarter-Kelly Sizing</span>
-          <span class="agent-stat-value" style="color: var(--accent-cyan);">1.50% Capital Cap</span>
+          <span class="agent-stat-label">Stop Loss Limit</span>
+          <span class="agent-stat-value" style="color: var(--accent-red); font-weight: 700;">-5.0% (Auto Square-Off)</span>
         </div>
       </div>
 
@@ -586,6 +586,10 @@
         </select>
       </div>
 
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--accent-cyan); background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-sm); padding: 7px 14px; font-family: var(--font-mono);">
+        <span>💰 90% Capital Allocated</span> &nbsp;|&nbsp; <span>🎯 +18% Target (15-20%)</span> &nbsp;|&nbsp; <span>🛑 -5% Stop Loss</span> &nbsp;|&nbsp; <span>⚡ Auto Square-Off</span>
+      </div>
+
       <div style="display: flex; gap: 10px;">
         <button id="btnRunCycle" class="btn btn-primary" onclick="triggerDecisionCycle()">
           ⚡ Run Autonomous Cycle
@@ -604,17 +608,18 @@
           <tr>
             <th>Symbol</th>
             <th>Side</th>
-            <th>Quantity</th>
+            <th>Quantity (90% Capital)</th>
             <th>Entry Price</th>
             <th>Current Price</th>
-            <th>Stop Loss</th>
-            <th>Target</th>
+            <th>Stop Loss (-5%)</th>
+            <th>Target (+18%)</th>
             <th>Unrealized PnL</th>
+            <th>Auto Square-Off Test</th>
           </tr>
         </thead>
         <tbody id="positionsTableBody">
           <tr>
-            <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Waiting for high-conviction consensus.</td>
+            <td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Waiting for high-conviction consensus.</td>
           </tr>
         </tbody>
       </table>
@@ -819,6 +824,25 @@
       }
     }
 
+    async function simulateTick(symbol, price, actionLabel) {
+      try {
+        const res = await fetch('/api/simulate-tick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, price })
+        });
+        const data = await res.json();
+        if (data.action === 'AUTO_SQUAREOFF') {
+          alert(`⚡ AUTO SQUARE-OFF TRIGGERED!\n\nSymbol: ${symbol}\nExit Reason: ${data.exit_reason}\nExit Price: ₹${data.exit_price.toFixed(2)}\nNet Realized PnL: ₹${data.net_pnl.toFixed(2)}`);
+        } else {
+          alert(data.message);
+        }
+        updateDashboard();
+      } catch (err) {
+        alert('Simulate tick error: ' + err.message);
+      }
+    }
+
     async function updateDashboard() {
       try {
         const res = await fetch('/api/status');
@@ -866,7 +890,7 @@
         const posTbody = document.getElementById('positionsTableBody');
         const posKeys = Object.keys(data.positions || {});
         if (posKeys.length === 0) {
-          posTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Waiting for high-conviction consensus.</td></tr>';
+          posTbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Waiting for high-conviction consensus.</td></tr>';
         } else {
           posTbody.innerHTML = posKeys.map(k => {
             const p = data.positions[k];
@@ -874,12 +898,16 @@
             return `<tr>
               <td><strong>${p.symbol}</strong></td>
               <td><span class="badge-pill ${p.side === 'BUY' ? 'pill-green' : 'pill-red'}">${p.side}</span></td>
-              <td>${p.quantity}</td>
+              <td><strong style="color: var(--accent-cyan);">${p.quantity}</strong></td>
               <td>₹${p.entry_price.toFixed(2)}</td>
               <td>₹${p.current_price.toFixed(2)}</td>
-              <td>₹${p.stop_loss.toFixed(2)}</td>
-              <td>₹${p.target_price.toFixed(2)}</td>
+              <td style="color: var(--accent-red); font-weight: 600;">₹${p.stop_loss.toFixed(2)} (-5%)</td>
+              <td style="color: var(--accent-green); font-weight: 600;">₹${p.target_price.toFixed(2)} (+18%)</td>
               <td style="color: ${pnlColor}; font-weight: 700;">₹${p.unrealized_pnl.toFixed(2)}</td>
+              <td>
+                <button class="btn btn-success" style="padding: 4px 10px; font-size: 11px; margin-right: 6px;" onclick="simulateTick('${p.symbol}', ${p.target_price}, 'Target Hit')">🎯 +18% Target</button>
+                <button class="btn btn-danger" style="padding: 4px 10px; font-size: 11px;" onclick="simulateTick('${p.symbol}', ${p.stop_loss}, 'Stop Loss')">🛑 -5% Stop</button>
+              </td>
             </tr>`;
           }).join('');
         }

@@ -145,20 +145,26 @@ class PaperBroker(BaseBrokerAdapter):
         exit_reason = None
         exit_price = None
 
+        # Calculate percentage return of position
+        pnl_pct = (current_price - pos.entry_price) / pos.entry_price if pos.side == OrderSide.BUY else (pos.entry_price - current_price) / pos.entry_price
+
+        # Automatic Square-Off Triggers:
+        # Profit Target: 15% to 20% (or target_price reached)
+        # Stop Loss: -5.0% (or stop_loss reached)
         if pos.side == OrderSide.BUY:
-            if current_price >= pos.target_price:
+            if current_price >= pos.target_price or pnl_pct >= 0.15:
                 exit_reason = ExitReason.TARGET
-                exit_price = pos.target_price
-            elif current_price <= pos.stop_loss:
+                exit_price = current_price
+            elif current_price <= pos.stop_loss or pnl_pct <= -0.05:
                 exit_reason = ExitReason.STOP_LOSS
-                exit_price = pos.stop_loss
+                exit_price = current_price
         else: # SHORT
-            if current_price <= pos.target_price:
+            if current_price <= pos.target_price or pnl_pct >= 0.15:
                 exit_reason = ExitReason.TARGET
-                exit_price = pos.target_price
-            elif current_price >= pos.stop_loss:
+                exit_price = current_price
+            elif current_price >= pos.stop_loss or pnl_pct <= -0.05:
                 exit_reason = ExitReason.STOP_LOSS
-                exit_price = pos.stop_loss
+                exit_price = current_price
 
         if exit_reason and exit_price:
             return self._close_position(symbol, exit_price, exit_reason, now)

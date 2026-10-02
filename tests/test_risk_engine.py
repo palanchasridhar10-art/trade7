@@ -121,32 +121,31 @@ def test_risk_engine_vetoes_when_max_positions_reached(risk_engine, base_portfol
     assert verdict.action == RiskAction.VETOED
     assert "MAX_POSITIONS_REACHED" in verdict.rules_triggered
 
-def test_risk_engine_clamps_single_stock_exposure(risk_engine, base_portfolio):
-    # 10% max single stock of ₹10,00,000 = ₹1,00,000
-    # At ₹2,500/share, max units allowed = 40 shares
-    # If proposal suggests 100 shares, it must be downsized to 40
+def test_risk_engine_allocates_90_percent_capital(risk_engine, base_portfolio):
+    # 90% of ₹10,00,000 = ₹9,00,000
+    # At ₹2,500/share, 90% allocation is 360 shares
     proposal = TradeProposal(
-        proposal_id="PROP-04",
+        proposal_id="PROP-90PCT",
         symbol="RELIANCE",
         side=OrderSide.BUY,
         entry_price=2500.0,
-        stop_loss=2480.0,
-        target_price=2560.0, # risk per unit = 20, gain per unit = 60
-        suggested_quantity=100,
-        suggested_risk_amount=2000.0,
-        kelly_fraction=0.02,
-        calibrated_win_prob=0.62,
-        payoff_ratio=3.0,
+        stop_loss=2375.0, # 5% stop loss (2500 * 0.95 = 2375)
+        target_price=2950.0, # 18% profit target (2500 * 1.18 = 2950)
+        suggested_quantity=360,
+        suggested_risk_amount=45000.0,
+        kelly_fraction=0.05,
+        calibrated_win_prob=0.64,
+        payoff_ratio=3.6,
         timestamp=datetime.now()
     )
 
     verdict = risk_engine.evaluate_proposal(proposal, base_portfolio, enforce_timing=False)
-    assert verdict.action == RiskAction.DOWNSIZED
-    assert verdict.approved_quantity <= 40
-    assert "QUANTITY_DOWNSIZED_FOR_SAFETY" in verdict.rules_triggered
+    assert verdict.action == RiskAction.APPROVED
+    assert verdict.approved_quantity == 360
+    assert verdict.approved_risk_amount == 360 * 125.0
 
 def test_quantity_scales_with_portfolio_capital(risk_engine):
-    # Test that a portfolio with half the capital receives half the quantity
+    # Test that a portfolio with half the capital receives half the 90% allocation
     capital_large = 1_000_000.0
     capital_small = 500_000.0
 
@@ -166,26 +165,26 @@ def test_quantity_scales_with_portfolio_capital(risk_engine):
         symbol="TCS",
         side=OrderSide.BUY,
         entry_price=4000.0,
-        stop_loss=3950.0, # risk per unit = 50
-        target_price=4150.0,
+        stop_loss=3800.0, # 5% loss (4000 * 0.95 = 3800)
+        target_price=4720.0, # 18% profit (4000 * 1.18 = 4720)
         suggested_quantity=500,
-        suggested_risk_amount=25000.0,
-        kelly_fraction=0.01,
-        calibrated_win_prob=0.60,
-        payoff_ratio=3.0,
+        suggested_risk_amount=100000.0,
+        kelly_fraction=0.05,
+        calibrated_win_prob=0.64,
+        payoff_ratio=3.6,
         timestamp=datetime.now()
     )
 
     verdict_large = risk_engine.evaluate_proposal(proposal, port_large, enforce_timing=False)
     verdict_small = risk_engine.evaluate_proposal(proposal, port_small, enforce_timing=False)
 
-    # Risk budget: 1% of 1,000,000 = 10,000 -> 10,000 / 50 = 200 units (capped by single stock: 100k / 4000 = 25 units)
-    # Risk budget: 1% of 500,000 = 5,000 -> 5,000 / 50 = 100 units (capped by single stock: 50k / 4000 = 12 units)
-    assert verdict_large.approved_quantity == 25
-    assert verdict_small.approved_quantity == 12
+    # 90% of 1,000,000 = 900,000 / 4000 = 225 shares
+    # 90% of 500,000 = 450,000 / 4000 = 112 shares
+    assert verdict_large.approved_quantity == 225
+    assert verdict_small.approved_quantity == 112
 
 def test_quantity_vetoed_on_insufficient_available_cash(risk_engine, base_portfolio):
-    # Set available cash to only ₹200 (less than 20% margin for a ₹2,500 share = ₹500)
+    # Set available cash to only ₹200 (less than required margin for a ₹2,500 share = ₹500)
     base_portfolio.available_cash = 200.0
 
     proposal = TradeProposal(
@@ -193,13 +192,13 @@ def test_quantity_vetoed_on_insufficient_available_cash(risk_engine, base_portfo
         symbol="RELIANCE",
         side=OrderSide.BUY,
         entry_price=2500.0,
-        stop_loss=2480.0,
-        target_price=2560.0,
+        stop_loss=2375.0, # 5% loss
+        target_price=2950.0, # 18% target
         suggested_quantity=10,
-        suggested_risk_amount=200.0,
-        kelly_fraction=0.01,
-        calibrated_win_prob=0.60,
-        payoff_ratio=3.0,
+        suggested_risk_amount=1250.0,
+        kelly_fraction=0.05,
+        calibrated_win_prob=0.64,
+        payoff_ratio=3.6,
         timestamp=datetime.now()
     )
 
@@ -207,26 +206,26 @@ def test_quantity_vetoed_on_insufficient_available_cash(risk_engine, base_portfo
     assert verdict.action == RiskAction.VETOED
     assert "INSUFFICIENT_AVAILABLE_CASH" in verdict.rules_triggered
 
-def test_short_sell_quantity_constrained_by_capital_and_margin(risk_engine, base_portfolio):
-    # For a SELL (short) order in intraday MIS, quantity must also be constrained by capital
+def test_short_sell_quantity_constrained_by_90_percent_capital(risk_engine, base_portfolio):
+    # For a SELL (short) order in intraday MIS, quantity deploys up to 90% capital
     proposal_short = TradeProposal(
         proposal_id="PROP-SHORT",
         symbol="SBIN",
         side=OrderSide.SELL,
         entry_price=800.0,
-        stop_loss=815.0, # risk per unit = 15
-        target_price=760.0,
-        suggested_quantity=500,
-        suggested_risk_amount=7500.0,
-        kelly_fraction=0.01,
-        calibrated_win_prob=0.60,
-        payoff_ratio=2.67,
+        stop_loss=840.0, # 5% loss against short
+        target_price=656.0, # 18% profit on short
+        suggested_quantity=1500,
+        suggested_risk_amount=60000.0,
+        kelly_fraction=0.05,
+        calibrated_win_prob=0.64,
+        payoff_ratio=3.6,
         timestamp=datetime.now()
     )
 
     verdict = risk_engine.evaluate_proposal(proposal_short, base_portfolio, enforce_timing=False)
     assert verdict.action in [RiskAction.APPROVED, RiskAction.DOWNSIZED]
     assert verdict.approved_quantity > 0
-    # Must not exceed single stock cap (10% of 1M = 100k / 800 = 125 shares)
-    assert verdict.approved_quantity <= 125
+    # 90% of 1M = 900,000 / 800 = 1,125 shares
+    assert verdict.approved_quantity == 1125
 
