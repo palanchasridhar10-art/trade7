@@ -1,0 +1,76 @@
+# Global System Settings
+system:
+  name: "Autonomous 3-Agent Trading System"
+  version: "1.0.0"
+  market: "NSE"
+  timezone: "Asia/Kolkata"
+  environment: "paper" # "paper" | "live" | "backtest"
+  log_level: "INFO"
+
+scheduler:
+  market_open_time: "09:15"
+  market_close_time: "15:30"
+  trade_window_start: "09:30"
+  trade_window_end: "15:00"
+  mis_squareoff_time: "15:15"
+  cycle_interval_seconds: 60
+
+watchlist:
+  symbols:
+    - "RELIANCE"
+    - "TCS"
+    - "HDFCBANK"
+    - "INFY"
+    - "ICICIBANK"
+    - "BHARTIARTL"
+    - "SBIN"
+    - "ITC"
+    - "LT"
+    - "NIFTY50"
+
+broker:
+  active_adapter: "paper" # "paper" | "angelone"
+  slippage_percent: 0.08 # 0.08% realistic slippage
+  paper_initial_capital: 1000000.0 # ₹10,00,000 INR
+  angel_one:
+    exchange: "NSE"
+    product_type: "INTRADAY" # MIS
+    totp_enabled: true
+
+agent1:
+  weights:
+    market_regime: 0.30
+    sector_strength: 0.20
+    company_quality: 0.30
+    news_sentiment: 0.20
+  thresholds:
+    long_score: 65.0
+    short_score: 35.0
+  llm:
+    enabled: false # Set true when LLM API keys configured
+    provider: "gemini"
+    model: "gemini-1.5-flash"
+
+agent2:
+  weights:
+    trend: 0.30
+    momentum: 0.25
+    volume: 0.20
+    structure: 0.15
+    volatility: 0.10
+  thresholds:
+    long_score: 0.60
+    short_score: -0.60
+  kelly:
+    multiplier: 0.25 # Quarter-Kelly
+    max_risk_cap: 0.015 # 1.5% max capital risk per trade
+    min_payoff_ratio: 1.50
+    min_calibrated_prob: 0.55
+
+agent3:
+  consensus:
+    min_fund_confidence: 0.40
+    min_tech_confidence: 0.60
+    min_combined_conviction: 0.65
+    fund_weight: 0.40
+    tech_weight: 0.60

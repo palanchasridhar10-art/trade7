@@ -1,0 +1,30 @@
+services:
+  # Option 1: Web Service (with HTTP health check endpoints /health and /portfolio)
+  - type: web
+    name: autonomous-trading-system-web
+    env: python
+    region: singapore # Closest available Render region to India / NSE
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python -u server.py"
+    healthCheckPath: "/health"
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: SYSTEM_ENVIRONMENT
+        value: "paper"
+      - key: INITIAL_CAPITAL
+        value: "1000000.0"
+      - key: MAX_RISK_PER_TRADE_PCT
+        value: "1.0"
+      - key: MAX_OPEN_POSITIONS
+        value: "5"
+      # Angel One API Credentials (fill in Render dashboard secrets)
+      - key: ANGEL_API_KEY
+        sync: false
+      - key: ANGEL_CLIENT_CODE
+        sync: false
+      - key: ANGEL_PIN
+        sync: false
+      - key: ANGEL_TOTP_SECRET
+        sync: false

@@ -1,0 +1,27 @@
+# Deterministic Risk Engine Constraints (Zero LLM Bypass)
+risk_limits:
+  max_risk_per_trade_percent: 1.0     # Default 1.0% of portfolio capital
+  hard_risk_cap_percent: 2.0          # Absolute upper bound
+  max_open_positions: 5               # Maximum simultaneous active positions
+  max_sector_exposure_percent: 25.0   # Maximum cumulative capital allocated to any single sector
+  max_single_stock_exposure_percent: 10.0 # Maximum capital in any single stock
+  daily_loss_limit_percent: 2.0       # Halt trading for day if cumulative daily loss reaches 2.0%
+  weekly_loss_limit_percent: 5.0      # Halt and require human intervention if weekly loss reaches 5.0%
+  max_drawdown_limit_percent: 12.0    # Peak-to-trough portfolio drawdown limit
+  min_expected_gain_to_cost_ratio: 3.0 # Expected profit must exceed 3x roundtrip statutory costs
+
+trade_window:
+  allowed_start_time: "09:30"
+  allowed_end_time: "15:00"
+  auto_squareoff_time: "15:15"
+
+liquidity_hurdles:
+  min_20d_adv_crores: 10.0            # Stock must trade at least ₹10 Cr daily average
+  max_order_pct_of_adv: 1.5           # Order size cannot exceed 1.5% of ADV
+  restricted_categories:
+    - "ASM_STAGE_1"
+    - "ASM_STAGE_2"
+    - "ASM_STAGE_3"
+    - "ASM_STAGE_4"
+    - "GSM"
+    - "FO_BAN"
