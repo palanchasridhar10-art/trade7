@@ -298,3 +298,13 @@ class TradingOrchestrator:
             reason=reason
         )
         return executed_order
+
+    def on_daily_rollover(self, daily_manager=None, target_date: Optional[datetime] = None) -> Dict[str, Any]:
+        """Coordinates daily data refresh across all agents, risk engine, and broker."""
+        if daily_manager:
+            return daily_manager.perform_daily_rollover(target_date=target_date, force=True)
+        if hasattr(self.risk_engine, "reset_daily_limits"):
+            self.risk_engine.reset_daily_limits()
+        if hasattr(self.broker, "reset_daily_pnl"):
+            self.broker.reset_daily_pnl()
+        return {"status": "SUCCESS", "message": "Daily rollover coordinated across agents"}

@@ -70,6 +70,70 @@ class TechnicalAnalystAgent:
         self.min_volume_ratio     = 1.25   # Volume must be 25%+ above average
         self.min_indicator_votes  = 4      # Need 4 of 5 indicators to agree
 
+        # Daily technical data store
+        self.daily_profiles: Dict[str, Dict[str, Any]] = {}
+        self.daily_smc: Dict[str, Dict[str, Any]] = {}
+        self.daily_orderflow: Dict[str, Dict[str, Any]] = {}
+        self.last_daily_update: Optional[datetime] = None
+        self.trading_date: Optional[str] = None
+
+    def update_daily_technicals(
+        self,
+        symbol: str,
+        tech_dict: Dict[str, Any],
+        smc_dict: Optional[Dict[str, Any]] = None,
+        orderflow_dict: Optional[Dict[str, Any]] = None
+    ):
+        """Update daily technical indicators, SMC, and order flow metrics for a single stock."""
+        if symbol not in self.daily_profiles:
+            self.daily_profiles[symbol] = {}
+        self.daily_profiles[symbol].update(tech_dict)
+        if smc_dict:
+            if symbol not in self.daily_smc:
+                self.daily_smc[symbol] = {}
+            self.daily_smc[symbol].update(smc_dict)
+        if orderflow_dict:
+            if symbol not in self.daily_orderflow:
+                self.daily_orderflow[symbol] = {}
+            self.daily_orderflow[symbol].update(orderflow_dict)
+        self.last_daily_update = datetime.now()
+
+    def bulk_update_daily_technicals(
+        self,
+        tech_map: Dict[str, Dict[str, Any]],
+        smc_map: Optional[Dict[str, Dict[str, Any]]] = None,
+        of_map: Optional[Dict[str, Dict[str, Any]]] = None,
+        update_date: Optional[str] = None
+    ):
+        """Bulk update daily technical indicators across the entire universe."""
+        for sym, t in tech_map.items():
+            if sym not in self.daily_profiles:
+                self.daily_profiles[sym] = {}
+            self.daily_profiles[sym].update(t)
+        if smc_map:
+            for sym, s in smc_map.items():
+                if sym not in self.daily_smc:
+                    self.daily_smc[sym] = {}
+                self.daily_smc[sym].update(s)
+        if of_map:
+            for sym, o in of_map.items():
+                if sym not in self.daily_orderflow:
+                    self.daily_orderflow[sym] = {}
+                self.daily_orderflow[sym].update(o)
+        self.last_daily_update = datetime.now()
+        if update_date:
+            self.trading_date = update_date
+
+    def get_daily_profile(self, symbol: str) -> Dict[str, Any]:
+        """Retrieve the latest daily technical profile for a symbol."""
+        return {
+            "technicals": self.daily_profiles.get(symbol, {}),
+            "smc": self.daily_smc.get(symbol, {}),
+            "orderflow": self.daily_orderflow.get(symbol, {}),
+            "trading_date": self.trading_date,
+            "last_updated": self.last_daily_update.isoformat() if self.last_daily_update else None
+        }
+
     def detect_regime(self, adx: float, ema20: float, ema50: float, ema200: float, current_price: float) -> MarketRegime:
         """Classify market structure into Trending, Ranging, or High Volatility."""
         if adx > 25.0:
@@ -522,6 +586,8 @@ class TechnicalAnalystAgent:
                 "short_votes":             short_votes,
                 "gate_passed":             gate_passed,
                 "votes_aligned":           votes_aligned,
+                "trading_date":            self.trading_date or "latest",
+                "daily_updated_at":        self.last_daily_update.isoformat() if self.last_daily_update else None,
             },
             entry=entry,
             stop_loss=stop_loss,

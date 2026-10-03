@@ -35,6 +35,30 @@ class FundamentalAnalystAgent:
         cfg = config or {}
         self.long_threshold  = cfg.get("long_threshold",  62.0)
         self.short_threshold = cfg.get("short_threshold", 38.0)
+        self.daily_data: Dict[str, Dict[str, Any]] = dict(DAILY_DATA)
+        self.last_daily_update: Optional[datetime] = None
+        self.trading_date: Optional[str] = None
+
+    def update_daily_data(self, symbol: str, data: Dict[str, Any]):
+        """Update daily fundamental metrics for a specific symbol."""
+        if symbol not in self.daily_data:
+            self.daily_data[symbol] = {}
+        self.daily_data[symbol].update(data)
+        self.last_daily_update = datetime.now()
+
+    def bulk_update_daily_data(self, data_map: Dict[str, Dict[str, Any]], update_date: Optional[str] = None):
+        """Bulk update daily fundamental metrics across all universe symbols."""
+        for sym, d in data_map.items():
+            if sym not in self.daily_data:
+                self.daily_data[sym] = {}
+            self.daily_data[sym].update(d)
+        self.last_daily_update = datetime.now()
+        if update_date:
+            self.trading_date = update_date
+
+    def get_daily_metrics(self, symbol: str) -> Dict[str, Any]:
+        """Retrieve the latest daily metrics for a symbol."""
+        return self.daily_data.get(symbol, DAILY_DATA.get(symbol, {}))
 
     # ──────────────────────────────────────────────────────────────────────
     #  DAILY SCORE  (0 – 100)
@@ -42,7 +66,7 @@ class FundamentalAnalystAgent:
     #           news sentiment, delivery %, put/call ratio.
     # ──────────────────────────────────────────────────────────────────────
     def _score_daily(self, symbol: str, macro: MacroContext) -> Tuple[float, list]:
-        d = DAILY_DATA.get(symbol, {})
+        d = self.daily_data.get(symbol, DAILY_DATA.get(symbol, {}))
         score = 50.0
         reasons = []
 
@@ -369,11 +393,13 @@ class FundamentalAnalystAgent:
                 "fii_dii_net_flow_cr":  macro.fii_net_flow_5d_cr + macro.dii_net_flow_5d_cr,
                 "news_sentiment":       news_sentiment_score,
                 # Daily sub-signals
-                "daily_pct_change":     DAILY_DATA.get(symbol, {}).get("pct_change", 0.0),
-                "daily_vol_ratio":      DAILY_DATA.get(symbol, {}).get("vol_ratio", 1.0),
-                "daily_fii_net_cr":     DAILY_DATA.get(symbol, {}).get("fii_net_cr", 0.0),
-                "delivery_pct":         DAILY_DATA.get(symbol, {}).get("delivery_pct", 50.0),
-                "put_call_ratio":       DAILY_DATA.get(symbol, {}).get("put_call_ratio", 1.0),
+                "daily_pct_change":     self.get_daily_metrics(symbol).get("pct_change", 0.0),
+                "daily_vol_ratio":      self.get_daily_metrics(symbol).get("vol_ratio", 1.0),
+                "daily_fii_net_cr":     self.get_daily_metrics(symbol).get("fii_net_cr", 0.0),
+                "delivery_pct":         self.get_daily_metrics(symbol).get("delivery_pct", 50.0),
+                "put_call_ratio":       self.get_daily_metrics(symbol).get("put_call_ratio", 1.0),
+                "trading_date":         self.trading_date or "latest",
+                "daily_updated_at":     self.last_daily_update.isoformat() if self.last_daily_update else None,
                 # Monthly sub-signals
                 "q_pat_growth":         MONTHLY_DATA.get(symbol, {}).get("q_pat_growth", 0.0),
                 "q_rev_growth":         MONTHLY_DATA.get(symbol, {}).get("q_rev_growth", 0.0),
@@ -443,7 +469,7 @@ class FundamentalAnalystAgent:
                 "score": round(daily_score, 1),
                 "bias": "BULLISH" if daily_score >= 60 else ("BEARISH" if daily_score <= 40 else "NEUTRAL"),
                 "reasons": daily_reasons,
-                "metrics": DAILY_DATA.get(symbol, {})
+                "metrics": self.get_daily_metrics(symbol)
             },
             "monthly": {
                 "score": round(monthly_score, 1),

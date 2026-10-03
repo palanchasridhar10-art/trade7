@@ -28,6 +28,10 @@ class PaperBroker(BaseBrokerAdapter):
     def disconnect(self) -> None:
         self.connected = False
 
+    def reset_daily_pnl(self) -> None:
+        """Reset daily realized P&L counter on daily rollover."""
+        self.daily_realized_pnl = 0.0
+
     def calculate_statutory_fees(self, turnover_entry: float, turnover_exit: float, is_intraday: bool = True) -> float:
         """Calculate comprehensive Indian statutory charges."""
         total_turnover = turnover_entry + turnover_exit

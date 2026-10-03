@@ -35,6 +35,7 @@ from src.memory.journal import TradeJournal
 from src.orchestrator.pipeline import TradingOrchestrator
 from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES, SMC_PROFILES
 from src.data.smc import compute_smc_metrics, SMCData
+from src.data.daily_updater import DailyDataManager
 
 # Global state
 journal = TradeJournal(db_path="trade_journal.db")
@@ -50,6 +51,15 @@ risk_engine = DeterministicRiskEngine({
 agent1 = FundamentalAnalystAgent()
 agent2 = TechnicalAnalystAgent()
 agent3 = ExecutionAgent(risk_engine=risk_engine)
+
+# Daily Data Management Engine for 3 Agents
+daily_manager = DailyDataManager(
+    agent1=agent1,
+    agent2=agent2,
+    agent3=agent3,
+    risk_engine=risk_engine,
+    broker=PaperBroker()
+)
 
 active_broker = None
 active_client_code = None
@@ -81,32 +91,35 @@ def populate_initial_analysis():
 
     for symbol in AUTO_WATCHLIST:
         cdata = NIFTY50_UNIVERSE.get(symbol, {})
-        breakdown = agent1.get_multi_timeframe_breakdown(symbol)
+        qdata = daily_manager.daily_quotes.get(symbol, {})
+        px = float(qdata.get("price", cdata.get("price", 0)))
+        breakdown = agent1.get_multi_timeframe_breakdown(symbol, macro=daily_manager.macro_context)
         fund_dir = breakdown["direction"]
         fund_score = breakdown["composite_score"]
         daily_score = breakdown["daily"]["score"]
         monthly_score = breakdown["monthly"]["score"]
         yearly_score = breakdown["yearly"]["score"]
 
-        tp = TECHNICAL_PROFILES.get(symbol, {})
+        tp = daily_manager.daily_technicals.get(symbol, TECHNICAL_PROFILES.get(symbol, {}))
         tech_dir = tp.get("direction", "NEUTRAL")
         win_p = 0.975 if (tp.get("adx", 0) >= 28 and tp.get("rsi14", 50) > 55) else 0.50
         gate_passed = (win_p >= 0.68 and fund_dir == "LONG")
 
-        smc_prof = SMC_PROFILES.get(symbol, {})
+        smc_prof = daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
+        of_prof = daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, {}))
         pm = temp_orch.compute_day_profit_potential(
             win_prob=win_p,
             fund_score=fund_score,
             adx=tp.get("adx", 20.0),
             volume_ratio=tp.get("volume_ratio", 1.0),
-            orderflow=ORDER_FLOW_PROFILES.get(symbol, {}),
+            orderflow=of_prof,
             smc=smc_prof
         )
 
         analysis_summary[symbol] = {
             "symbol":             symbol,
             "sector":             cdata.get("sector", "EQUITY"),
-            "price":              cdata.get("price", 0),
+            "price":              px,
             "fund_direction":     fund_dir,
             "fund_confidence":    breakdown["confidence"],
             "fund_score":         fund_score,
@@ -132,12 +145,13 @@ def populate_initial_analysis():
             "leveraged_expected_profit_pct": pm["leveraged_expected_profit_pct"],
             "is_top_pick":        False,
             "reason":             f"Multi-Timeframe Fund: Daily {daily_score} | Monthly {monthly_score} | Yearly {yearly_score} (Composite: {fund_score})",
-            "orderflow":          ORDER_FLOW_PROFILES.get(symbol, {}),
+            "orderflow":          of_prof,
             "smc":                smc_prof,
             "features":           {"gate_passed": gate_passed},
             "order":              None,
             "scanned_at":         datetime.now().isoformat(),
-            "scan_no":            0
+            "scan_no":            0,
+            "trading_date":       daily_manager.active_market_date.isoformat()
         }
 
         if gate_passed and win_p >= 0.90:
@@ -205,6 +219,17 @@ def auto_trading_loop():
             continue
 
         now_ist = NSECalendar.get_ist_now()
+
+        # Daily Data Update Check: Automatically rollover agents' data when calendar date advances
+        if daily_manager.is_update_due(now_ist):
+            print(f"[AUTO-TRADE] New trading day detected ({now_ist.date()}) — performing automated daily data rollover across all agents...")
+            try:
+                rollover_res = daily_manager.perform_daily_rollover(target_date=now_ist.date())
+                print(f"[AUTO-TRADE] Rollover complete: {rollover_res.get('status')}. Re-ranking universe with today's fresh metrics...")
+                populate_initial_analysis()
+            except Exception as e:
+                logger.error(f"[AUTO-TRADE] Error in daily rollover: {e}")
+
         # Enforce Intraday EOD Cut-Off: Auto square-off all MIS positions at 15:15 IST
         if NSECalendar.should_square_off_mis(now_ist):
             print("[AUTO-TRADE] EOD Cut-off reached (15:15 IST) — squaring off all open Intraday MIS positions...")
@@ -558,6 +583,23 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     "smc": smc_all
                 })
 
+        elif self.path == "/api/daily-status":
+            self._send_json(200, daily_manager.get_status())
+
+        elif self.path.startswith("/api/daily-data"):
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            sym = params.get("symbol", [None])[0]
+            if sym:
+                sym_clean = sym.upper().strip()
+                if sym_clean in NIFTY50_UNIVERSE:
+                    self._send_json(200, daily_manager.get_symbol_daily_data(sym_clean))
+                else:
+                    self._send_json(404, {"error": f"Symbol {sym_clean} not found in Nifty 50 universe"})
+            else:
+                self._send_json(200, daily_manager.get_status())
+
         else:
             self._send_json(404, {"error": "Not Found"})
 
@@ -604,6 +646,7 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
 
                 if success:
                     active_broker = adapter
+                    daily_manager.broker = adapter
                     active_client_code = client_code
                     active_mode = "live"
                     is_broker_connected = True
@@ -628,6 +671,7 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
             else: # Paper Simulation Mode
                 paper_code = payload.get("client_code", "").strip() or "PAPER_DEMO"
                 active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
+                daily_manager.broker = active_broker
                 active_client_code = paper_code
                 active_mode = "paper"
                 is_broker_connected = True
@@ -787,17 +831,34 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "scanned_at": datetime.now().isoformat()
             })
 
+        elif self.path == "/api/daily-update":
+            market_bias = payload.get("market_bias", "BULLISH")
+            force = payload.get("force", True)
+            rollover_result = daily_manager.perform_daily_rollover(force=force, market_bias=market_bias)
+            try:
+                populate_initial_analysis()
+            except Exception as e:
+                logger.error(f"Error refreshing analysis after daily update: {e}")
+            self._send_json(200, {
+                "status": "success",
+                "message": f"Daily update executed for {rollover_result.get('active_date')}! All 50 stocks and agents synchronized.",
+                "rollover": rollover_result,
+                "daily_status": daily_manager.get_status(),
+                "top_alpha_pick": top_alpha_pick
+            })
+
         else:
             self._send_json(404, {"error": "Not Found"})
 
 def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool = True) -> Dict[str, Any]:
-    """Run a full 3-agent evaluation cycle using per-company data from the Nifty 50 universe."""
-    # ── Company data from universe ─────────────────────────────────────────
+    """Run a full 3-agent evaluation cycle using per-company data from the Nifty 50 universe and daily data manager."""
+    # ── Company data from universe & daily data manager ───────────────────
     cdata = NIFTY50_UNIVERSE.get(symbol, {})
-    px    = cdata.get("price", 2000.0)
+    qdata = daily_manager.daily_quotes.get(symbol, {})
+    px    = float(qdata.get("price", cdata.get("price", 2000.0)))
 
-    # ── Shared macro context ───────────────────────────────────────────────
-    macro = MacroContext(
+    # ── Dynamic daily macro context ───────────────────────────────────────
+    macro = daily_manager.macro_context or MacroContext(
         timestamp=datetime.now(),
         nifty50_close=25450.0,
         nifty50_1w_return=1.45,
@@ -813,7 +874,7 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
     quote = Quote(
         symbol=symbol, timestamp=datetime.now(),
         last_price=px, bid_price=px - 0.2, ask_price=px + 0.2,
-        volume=cdata.get("volume", 2_000_000)
+        volume=int(qdata.get("volume", cdata.get("volume", 2_000_000)))
     )
 
     # ── Per-company fundamentals ───────────────────────────────────────────
@@ -834,31 +895,31 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
         is_fo_ban=cdata.get("fo_ban", False)
     )
 
-    # ── Per-company technical indicators ──────────────────────────────────
-    tp = TECHNICAL_PROFILES.get(symbol, {})
+    # ── Per-company daily technical indicators ────────────────────────────
+    tp = daily_manager.daily_technicals.get(symbol, TECHNICAL_PROFILES.get(symbol, {}))
     adx_val      = tp.get("adx", 22.0)
     rsi_val      = tp.get("rsi14", 50.0)
     macd_val     = tp.get("macd_hist", 0.5)
     vol_ratio    = tp.get("volume_ratio", 1.0)
     vwap_ratio   = tp.get("vwap_ratio", 1.0)
-    ema20_ratio  = tp.get("ema20_r", 0.995)
-    ema50_ratio  = tp.get("ema50_r", 0.980)
-    ema200_ratio = tp.get("ema200_r", 0.940)
+    ema20_val    = tp.get("ema20", px * tp.get("ema20_r", 0.995))
+    ema50_val    = tp.get("ema50", px * tp.get("ema50_r", 0.980))
+    ema200_val   = tp.get("ema200", px * tp.get("ema200_r", 0.940))
 
     tech_inputs = {
-        "ema20":              px * ema20_ratio,
-        "ema50":              px * ema50_ratio,
-        "ema200":             px * ema200_ratio,
+        "ema20":              ema20_val,
+        "ema50":              ema50_val,
+        "ema200":             ema200_val,
         "adx":                adx_val,
         "rsi14":              rsi_val,
         "macd_hist":          macd_val,
-        "atr14":              px * 0.012,
-        "vwap":               px / vwap_ratio,
+        "atr14":              tp.get("atr14", px * 0.012),
+        "vwap":               tp.get("vwap", px / vwap_ratio),
         "volume_ratio":       vol_ratio,
         "sector_rs_score":    65.0,
-        "news_sentiment_score": 0.3,
-        "orderflow":          ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {})),
-        "smc":                SMC_PROFILES.get(symbol, {})
+        "news_sentiment_score": daily_manager.daily_fundamentals.get(symbol, {}).get("news_sentiment", 0.3),
+        "orderflow":          daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {}))),
+        "smc":                daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
     }
 
     return orch.run_cycle_for_symbol(

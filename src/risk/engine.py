@@ -27,6 +27,11 @@ class DeterministicRiskEngine:
         self.max_drawdown_pct = cfg.get("max_drawdown_limit_percent", 25.0) / 100.0   # 25% max drawdown
         self.max_open_positions = cfg.get("max_open_positions", 1)                    # Strictly 1 company trade at a time (Single Best Trade Policy)
         self.min_expected_gain_to_cost_ratio = cfg.get("min_expected_gain_to_cost_ratio", 3.0)
+        self.last_daily_reset = datetime.now()
+
+    def reset_daily_limits(self):
+        """Reset daily tracking state upon daily rollover."""
+        self.last_daily_reset = datetime.now()
 
     def calculate_statutory_costs(self, entry_price: float, target_price: float, quantity: int, product_type: ProductType) -> float:
         """Estimate realistic Indian market statutory costs for roundtrip trade."""
