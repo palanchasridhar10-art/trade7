@@ -560,6 +560,132 @@
           ⚡ Run Autonomous Cycle on This Stock
         </button>
       </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Money Concepts (SMC) Intelligence Modal -->
+  <div id="smcModal" class="modal-overlay hidden" style="z-index: 120;">
+    <div class="login-card" style="max-width: 980px; width: 95%; max-height: 90vh; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 16px;">
+        <div>
+          <div class="angel-badge" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); color: var(--accent-green);">
+            🏛️ Agent 2 Smart Money Concepts (SMC) Institutional Intelligence
+          </div>
+          <h2 id="smcSymbolTitle" style="font-size: 22px; color: #fff; margin-top: 4px;">RELIANCE Smart Money Concepts</h2>
+          <p id="smcSectorSubtitle" style="font-size: 13px; color: var(--text-muted);">
+            Institutional Order Delivery · Break of Structure · Liquidity Sweeps · Order Blocks · Fair Value Gaps
+          </p>
+        </div>
+        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="closeSmcModal()">✕ Close</button>
+      </div>
+
+      <!-- Composite Summary Banner -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="display:flex; align-items:center; gap: 16px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">SMC Composite Score</div>
+            <div id="smcCompositeScore" style="font-size: 26px; font-weight: 800; font-family: var(--font-mono); color: var(--accent-green);">+0.95 / 1.0</div>
+          </div>
+          <div id="smcBiasBadge" class="badge-pill pill-green" style="font-size: 12px; padding: 6px 14px;">BULLISH ACCUMULATION</div>
+        </div>
+        <div style="display: flex; gap: 18px; font-size: 12px; font-family: var(--font-mono);">
+          <div><span style="color:var(--text-muted);">🏛️ Structure:</span> <strong id="smcHeaderStructure" style="color:var(--accent-cyan);">BULLISH_BOS</strong></div>
+          <div><span style="color:var(--text-muted);">💧 Liquidity:</span> <strong id="smcHeaderLiquidity" style="color:var(--accent-blue);">SSL_SWEPT</strong></div>
+          <div><span style="color:var(--text-muted);">🏷️ Zone:</span> <strong id="smcHeaderZone" style="color:var(--accent-green);">DISCOUNT (38.5%)</strong></div>
+        </div>
+      </div>
+
+      <!-- Institutional Narrative Box -->
+      <div style="background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.25); border-radius: var(--radius-md); padding: 12px 18px; margin-bottom: 18px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-green); text-transform: uppercase; margin-bottom: 4px;">Institutional Order Delivery Narrative:</div>
+        <div id="smcNarrativeText" style="font-size: 13px; color: var(--text-main); line-height: 1.5;">
+          Smart Money accumulation confirmed: Price swept sell-side liquidity into demand order block and broke market structure to the upside.
+        </div>
+      </div>
+
+      <!-- 4 Pillars of SMC Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 18px;">
+        <!-- 1. Market Structure -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+              <span>🏛️ 1. MARKET STRUCTURE</span>
+              <span style="font-size: 10px; background: rgba(0,240,255,0.15); padding: 1px 5px; border-radius: 4px;">35% Weight</span>
+            </div>
+            <span id="smcStructBadge" class="badge-pill pill-green">BOS</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Structural swings & trend integrity:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Structure Type</span><span class="agent-stat-value" id="smcStructType" style="color:var(--accent-cyan); font-weight:700;">BULLISH_BOS</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Structure Score</span><span class="agent-stat-value" id="smcStructScore">+1.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Swing High Level</span><span class="agent-stat-value" id="smcSwingHigh">₹3,022.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Swing Low Level</span><span class="agent-stat-value" id="smcSwingLow">₹2,832.00</span></div>
+        </div>
+
+        <!-- 2. Liquidity Dynamics -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-blue); display: flex; align-items: center; gap: 6px;">
+              <span>💧 2. LIQUIDITY DYNAMICS</span>
+              <span style="font-size: 10px; background: rgba(59,130,246,0.15); padding: 1px 5px; border-radius: 4px;">35% Weight</span>
+            </div>
+            <span id="smcLiqBadge" class="badge-pill pill-blue">SSL SWEPT</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Resting stop runs & trap mechanics:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Liquidity Event</span><span class="agent-stat-value" id="smcLiqEvent" style="color:var(--accent-blue); font-weight:700;">SSL_SWEPT</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Liquidity Score</span><span class="agent-stat-value" id="smcLiqScore">+1.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Buy-Side Target (BSL)</span><span class="agent-stat-value" id="smcBslPrice">₹3,031.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Sell-Side Low (SSL)</span><span class="agent-stat-value" id="smcSslPrice">₹2,826.00</span></div>
+        </div>
+
+        <!-- 3. Price Inefficiencies (OB + FVG) -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-purple); display: flex; align-items: center; gap: 6px;">
+              <span>⚡ 3. INEFFICIENCIES (OB & FVG)</span>
+              <span style="font-size: 10px; background: rgba(139,92,246,0.15); padding: 1px 5px; border-radius: 4px;">30% Weight</span>
+            </div>
+            <span id="smcInefficiencyBadge" class="badge-pill pill-green">+0.95</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Order Blocks & Fair Value Gaps:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Order Block</span><span class="agent-stat-value" id="smcObInfo" style="color:var(--accent-purple); font-weight:700;">BULLISH OB [₹2896 - ₹2931]</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">OB Displacement</span><span class="agent-stat-value" id="smcObVol">1.90x Volume</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Fair Value Gap</span><span class="agent-stat-value" id="smcFvgInfo" style="color:var(--accent-green); font-weight:700;">BISI [₹2905 - ₹2934]</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">50% Midpoint (CE)</span><span class="agent-stat-value" id="smcFvgCe">₹2,920.00</span></div>
+        </div>
+
+        <!-- 4. Dealing Range & Valuation -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-yellow); display: flex; align-items: center; gap: 6px;">
+              <span>🏷️ 4. DEALING RANGE</span>
+              <span style="font-size: 10px; background: rgba(245,158,11,0.15); padding: 1px 5px; border-radius: 4px;">Pricing Zone</span>
+            </div>
+            <span id="smcRangeBadge" class="badge-pill pill-green">DISCOUNT</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Equilibrium & premium/discount pricing:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Dealing Range High</span><span class="agent-stat-value" id="smcRangeHigh">₹3,051.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Dealing Range Low</span><span class="agent-stat-value" id="smcRangeLow">₹2,817.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Position In Range</span><span class="agent-stat-value" id="smcRangePct" style="color:var(--accent-green); font-weight:700;">38.5% (Discount)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Institutional Bias</span><span class="agent-stat-value" id="smcInstBias">Favorable Buying</span></div>
+        </div>
+      </div>
+
+      <!-- Rationale Bullet List -->
+      <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Detailed Institutional Proof Points:</div>
+        <ul id="smcRationaleList" style="margin-left: 20px; font-size: 12px; color: var(--text-main); line-height: 1.6;"></ul>
+      </div>
+
+      <!-- Quick Action Inside Modal -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">
+          Integrated with Agent 2 Quantitative Scoring & Gate 7 Validation
+        </span>
+        <button class="btn btn-primary" id="btnSmcModalRunCycle" onclick="triggerCycleForSmcSymbol()">
+          ⚡ Run Autonomous Cycle on This Stock
+        </button>
+      </div>
     </div>
   </div>
 
@@ -700,13 +826,13 @@
         <div class="agent-header">
           <div class="agent-title">
             <span>Agent 2</span>
-            <span class="agent-tag">Technical + Order Flow</span>
+            <span class="agent-tag">Technical + Order Flow + SMC</span>
           </div>
           <span id="agent2Badge" class="badge-pill pill-green">CONFLUENCE</span>
         </div>
         <div class="agent-stat-row">
           <span class="agent-stat-label">Confluence Score</span>
-          <span class="agent-stat-value" id="statTechScore">+0.98 / 1.0</span>
+          <span class="agent-stat-value" id="statTechScore">+0.98 / 1.0 (6 Pillars)</span>
         </div>
         <div class="agent-stat-row">
           <span class="agent-stat-label">Company Order Flow</span>
@@ -716,9 +842,22 @@
           <span class="agent-stat-label">Cumulative Delta (CVD)</span>
           <span class="agent-stat-value" id="statCvd" style="color: var(--accent-green); font-weight: 700;">+400,000 Shs (Buyers Lead)</span>
         </div>
-        <div class="agent-stat-row">
-          <span class="agent-stat-label">Capital & Risk Rules</span>
-          <span class="agent-stat-value" style="color: var(--text-main); font-weight: 600;">90% Cap · -5% SL · +18% Target</span>
+        <!-- Smart Money Concepts Row -->
+        <div class="agent-stat-row" style="background: rgba(16,185,129,0.06); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-green);">
+          <div>
+            <div style="font-weight: 600; color: #fff; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🏛️ Smart Money (SMC)</span>
+              <span id="statSmcBadge" class="badge-pill pill-green" style="font-size: 9px; padding: 1px 5px;">BULLISH_BOS</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;" id="statSmcDrivers">SSL Swept · Bullish OB Retest · BISI FVG · Discount Zone</div>
+          </div>
+          <span class="agent-stat-value" id="statSmcScore" style="color: var(--accent-green); font-size: 14px; font-weight: 700;">+0.95</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:4px;">
+          <span class="agent-stat-value" style="font-size:11px; color: var(--text-dim);">90% Cap · -5% SL · +18% Tgt</span>
+          <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="openSmcModalCurrent()">
+            🏛️ SMC Intel
+          </button>
         </div>
       </div>
 
@@ -895,11 +1034,12 @@
             <th>Gate</th>
             <th>Win Prob</th>
             <th>Action</th>
-            <th>Fundamental Intel</th>
+            <th>🏛️ Smart Money (SMC)</th>
+            <th>Actions / Intel</th>
           </tr>
         </thead>
         <tbody id="universeTableBody">
-          <tr><td colspan="13" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
+          <tr><td colspan="14" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1429,6 +1569,14 @@
         const monthlyColor = c.fund_monthly_score >= 60 ? 'var(--accent-blue)' : (c.fund_monthly_score <= 40 ? 'var(--accent-red)' : 'var(--text-muted)');
         const yearlyColor  = c.fund_yearly_score >= 60 ? 'var(--accent-purple)' : (c.fund_yearly_score <= 40 ? 'var(--accent-red)' : 'var(--text-muted)');
 
+        const smc = c.smc || {};
+        const smcStruct = smc.market_structure || 'RANGING';
+        const smcLiq = smc.liquidity_event || 'NEUTRAL';
+        const isSmcBull = smcStruct.includes('BULLISH') || smcLiq === 'SSL_SWEPT';
+        const isSmcBear = smcStruct.includes('BEARISH') || smcLiq === 'BSL_SWEPT';
+        const smcPillClass = isSmcBull ? 'pill-green' : (isSmcBear ? 'pill-red' : 'pill-gray');
+        const smcBadgeText = `${smcStruct.replace('BULLISH_', '').replace('BEARISH_', '').replace('_CONSOLIDATION', '')} · ${smcLiq.replace('_SWEPT', ' SWP')}`;
+
         return `<tr style="${rowBg}">
           <td><strong style="color:${isTop ? '#F59E0B' : (isTraded ? 'var(--accent-green)' : 'var(--text-main)')}">${isTop ? '★ ' : ''}${c.symbol}</strong></td>
           <td style="font-size:11px; color:var(--text-muted);">${c.sector}</td>
@@ -1442,10 +1590,16 @@
           <td>${gateIcon}</td>
           <td style="color:${winColor}; font-weight:700; font-family:var(--font-mono);">${winPct}</td>
           <td>${actPillHtml}</td>
+          <td><span class="badge-pill ${smcPillClass}" style="font-size:10px;">${smcBadgeText}</span></td>
           <td>
-            <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11px;" onclick="openFundModal('${c.symbol}')">
-              🔍 View Intel
-            </button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-secondary" style="padding: 3px 7px; font-size: 10px;" onclick="openFundModal('${c.symbol}')" title="Fundamental Intel">
+                🔍 Fund
+              </button>
+              <button class="btn btn-secondary" style="padding: 3px 7px; font-size: 10px; border-color: rgba(16,185,129,0.4); color: var(--accent-green);" onclick="openSmcModal('${c.symbol}')" title="Smart Money Concepts Intel">
+                🏛️ SMC
+              </button>
+            </div>
           </td>
         </tr>`;
       }).join('');
@@ -1618,6 +1772,132 @@
       }
     }
 
+    // ── Smart Money Concepts (SMC) Modal logic ──────────────────────────────
+    let currentSmcModalSymbol = 'RELIANCE';
+
+    function openSmcModalCurrent() {
+      const sym = document.getElementById('statFundSymbol').textContent.trim() || document.getElementById('symbolSelect').value || 'RELIANCE';
+      openSmcModal(sym);
+    }
+
+    async function openSmcModal(symbol) {
+      currentSmcModalSymbol = symbol;
+      try {
+        const res = await fetch(`/api/smc?symbol=${symbol}`);
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        document.getElementById('smcSymbolTitle').textContent = `${data.symbol} Smart Money Concepts (SMC)`;
+        document.getElementById('smcSectorSubtitle').textContent = `Institutional Delivery Engine · Structure (35%) + Liquidity (35%) + Inefficiencies (30%)`;
+
+        const compScoreEl = document.getElementById('smcCompositeScore');
+        compScoreEl.textContent = (data.smc_composite_score >= 0 ? '+' : '') + data.smc_composite_score.toFixed(2) + ' / 1.0';
+        const isBullish = data.smc_bias === 'BULLISH';
+        const isBearish = data.smc_bias === 'BEARISH';
+        compScoreEl.style.color = isBullish ? 'var(--accent-green)' : (isBearish ? 'var(--accent-red)' : 'var(--text-muted)');
+
+        const dirBadge = document.getElementById('smcBiasBadge');
+        dirBadge.className = `badge-pill ${isBullish ? 'pill-green' : (isBearish ? 'pill-red' : 'pill-gray')}`;
+        dirBadge.textContent = `${data.smc_bias} (Vote: ${data.smc_vote >= 0 ? '+' : ''}${data.smc_vote})`;
+
+        document.getElementById('smcHeaderStructure').textContent = data.market_structure;
+        document.getElementById('smcHeaderLiquidity').textContent = data.liquidity_event;
+        document.getElementById('smcHeaderZone').textContent = `${data.dealing_range_zone} (${data.dealing_range_pct}%)`;
+
+        document.getElementById('smcNarrativeText').textContent = data.institutional_narrative || 'Balanced institutional positioning across key structural dealing ranges.';
+
+        // Pillar 1: Market Structure
+        document.getElementById('smcStructType').textContent = data.market_structure;
+        document.getElementById('smcStructScore').textContent = (data.structure_score >= 0 ? '+' : '') + data.structure_score.toFixed(2);
+        document.getElementById('smcStructBadge').textContent = data.market_structure.replace('BULLISH_', '').replace('BEARISH_', '');
+        document.getElementById('smcStructBadge').className = `badge-pill ${data.structure_score > 0 ? 'pill-green' : (data.structure_score < 0 ? 'pill-red' : 'pill-gray')}`;
+
+        // Pillar 2: Liquidity Dynamics
+        document.getElementById('smcLiqEvent').textContent = data.liquidity_event;
+        document.getElementById('smcLiqScore').textContent = (data.liquidity_score >= 0 ? '+' : '') + data.liquidity_score.toFixed(2);
+        document.getElementById('smcLiqBadge').textContent = data.liquidity_event;
+        document.getElementById('smcLiqBadge').className = `badge-pill ${data.liquidity_score > 0 ? 'pill-green' : (data.liquidity_score < 0 ? 'pill-red' : 'pill-gray')}`;
+
+        // Pillar 3: Inefficiencies
+        const ob = data.active_order_block;
+        const fvg = data.active_fvg;
+        document.getElementById('smcInefficiencyBadge').textContent = (data.inefficiency_score >= 0 ? '+' : '') + data.inefficiency_score.toFixed(2);
+        document.getElementById('smcInefficiencyBadge').className = `badge-pill ${data.inefficiency_score > 0 ? 'pill-green' : (data.inefficiency_score < 0 ? 'pill-red' : 'pill-gray')}`;
+        if (ob) {
+          document.getElementById('smcObInfo').textContent = `${ob.type} [₹${ob.bottom.toFixed(2)} - ₹${ob.top.toFixed(2)}]`;
+          document.getElementById('smcObVol').textContent = `${ob.displacement}x Volume Surge`;
+        } else {
+          document.getElementById('smcObInfo').textContent = 'No Unmitigated OB nearby';
+          document.getElementById('smcObVol').textContent = 'Normal Tape';
+        }
+        if (fvg) {
+          document.getElementById('smcFvgInfo').textContent = `${fvg.type} [₹${fvg.bottom.toFixed(2)} - ₹${fvg.top.toFixed(2)}]`;
+          document.getElementById('smcFvgCe').textContent = `₹${fvg.ce.toFixed(2)} (50% CE)`;
+        } else {
+          document.getElementById('smcFvgInfo').textContent = 'No Active FVG Imbalance';
+          document.getElementById('smcFvgCe').textContent = 'Balanced Delivery';
+        }
+
+        // Pillar 4: Dealing Range
+        document.getElementById('smcRangeBadge').textContent = data.dealing_range_zone;
+        document.getElementById('smcRangeBadge').className = `badge-pill ${data.dealing_range_zone === 'DISCOUNT' ? 'pill-green' : (data.dealing_range_zone === 'PREMIUM' ? 'pill-red' : 'pill-yellow')}`;
+        document.getElementById('smcRangePct').textContent = `${data.dealing_range_pct}% (${data.dealing_range_zone})`;
+        document.getElementById('smcInstBias').textContent = data.dealing_range_zone === 'DISCOUNT' ? 'Favorable Buying Territory' : (data.dealing_range_zone === 'PREMIUM' ? 'Favorable Selling Territory' : 'Equilibrium (Neutral)');
+
+        // Rationale list
+        const rList = document.getElementById('smcRationaleList');
+        rList.innerHTML = (data.rationale && data.rationale.length > 0)
+          ? data.rationale.map(r => `<li>${r}</li>`).join('')
+          : '<li>Standard structural order delivery verified.</li>';
+
+        document.getElementById('btnSmcModalRunCycle').textContent = `⚡ Run Autonomous Cycle on ${symbol}`;
+        document.getElementById('smcModal').classList.remove('hidden');
+
+      } catch (err) {
+        console.error('Error fetching SMC intel:', err);
+        alert('Failed to load Smart Money Concepts intel: ' + err.message);
+      }
+    }
+
+    function closeSmcModal() {
+      document.getElementById('smcModal').classList.add('hidden');
+    }
+
+    function triggerCycleForSmcSymbol() {
+      closeSmcModal();
+      document.getElementById('symbolSelect').value = currentSmcModalSymbol;
+      updateAgent1CardForSymbol(currentSmcModalSymbol);
+      updateAgent2CardForSymbol(currentSmcModalSymbol);
+      triggerDecisionCycle();
+    }
+
+    async function updateAgent2CardForSymbol(symbol) {
+      try {
+        const res = await fetch(`/api/smc?symbol=${symbol}`);
+        const data = await res.json();
+        if (data.error) return;
+        const b = document.getElementById('statSmcBadge');
+        if (b) {
+          b.textContent = data.market_structure;
+          b.className = `badge-pill ${data.smc_bias === 'BULLISH' ? 'pill-green' : (data.smc_bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+        }
+        const sc = document.getElementById('statSmcScore');
+        if (sc) {
+          sc.textContent = (data.smc_composite_score >= 0 ? '+' : '') + data.smc_composite_score.toFixed(2);
+          sc.style.color = data.smc_bias === 'BULLISH' ? 'var(--accent-green)' : (data.smc_bias === 'BEARISH' ? 'var(--accent-red)' : 'var(--text-muted)');
+        }
+        const drv = document.getElementById('statSmcDrivers');
+        if (drv) {
+          drv.textContent = `${data.liquidity_event} · ${data.active_order_block ? data.active_order_block.type : 'No OB'} · ${data.dealing_range_zone} (${data.dealing_range_pct}%)`;
+        }
+      } catch (e) {
+        console.error('Error updating Agent 2 SMC card:', e);
+      }
+    }
+
     // Fetch full analysis on demand (called every 60s after connect)
     async function fetchFullAnalysis() {
       try {
@@ -1640,8 +1920,12 @@
       fetchFullAnalysis();
       const sel = document.getElementById('symbolSelect');
       if (sel) {
-        sel.addEventListener('change', (e) => updateAgent1CardForSymbol(e.target.value));
+        sel.addEventListener('change', (e) => {
+          updateAgent1CardForSymbol(e.target.value);
+          updateAgent2CardForSymbol(e.target.value);
+        });
         updateAgent1CardForSymbol(sel.value || 'RELIANCE');
+        updateAgent2CardForSymbol(sel.value || 'RELIANCE');
       }
       setInterval(updateDashboard, 5000);
       setInterval(fetchFullAnalysis, 60000);  // Refresh full analysis every 60s

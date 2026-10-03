@@ -209,3 +209,145 @@ TECHNICAL_PROFILES: Dict[str, Dict[str, Any]] = {
     "INDUSINDBK": {"adx": 25.0, "rsi14": 52.0, "macd_hist":  1.2, "volume_ratio": 1.20, "vwap_ratio": 1.002, "ema20_r": 0.994, "ema50_r": 0.980, "ema200_r": 0.940},
     "BAJAJFINSV": {"adx": 24.0, "rsi14": 52.0, "macd_hist":  1.0, "volume_ratio": 1.18, "vwap_ratio": 1.002, "ema20_r": 0.994, "ema50_r": 0.980, "ema200_r": 0.942},
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SMART MONEY CONCEPTS (SMC) PROFILES
+#  Includes: Market Structure (BOS / CHoCH), Liquidity Sweeps (SSL / BSL),
+#  Price Inefficiencies (Unmitigated Order Blocks, Fair Value Gaps BISI / SIBI),
+#  and Dealing Range pricing (Discount vs. Premium).
+# ─────────────────────────────────────────────────────────────────────────────
+def _build_smc_profiles() -> Dict[str, Dict[str, Any]]:
+    profiles: Dict[str, Dict[str, Any]] = {}
+    bullish_top_tier = {
+        "RELIANCE", "ONGC", "BPCL", "COALINDIA", "SBIN", "HDFCBANK",
+        "ICICIBANK", "AXISBANK", "TATAMOTORS", "TATASTEEL", "ITC",
+        "WIPRO", "HCLTECH", "TECHM", "LTI", "JSWSTEEL", "HINDALCO",
+        "SUNPHARMA", "DRREDDY", "CIPLA", "BHARTIARTL", "MARUTI", "M&M",
+        "BAJAJ-AUTO", "EICHERMOT", "LT", "ADANIPORTS", "SBILIFE", "HDFCLIFE",
+        "TITAN", "ULTRACEMCO", "GRASIM", "NTPC", "POWERGRID", "SIEMENS",
+        "APOLLOHOSP", "DABUR"
+    }
+
+    bearish_tier = {
+        "TCS", "KOTAKBANK", "BAJFINANCE", "HINDUNILVR", "ASIANPAINT",
+        "NESTLEIND", "DIVISLAB"
+    }
+
+    for sym, cdata in NIFTY50_UNIVERSE.items():
+        px = cdata.get("price", 2000.0)
+        tp = TECHNICAL_PROFILES.get(sym, {})
+        adx = tp.get("adx", 20.0)
+
+        if sym in bullish_top_tier and adx >= 28.0:
+            # Institutional Accumulation / Trend Continuation
+            # Price swept SSL below swing low and has broken structure upwards (BULLISH_BOS)
+            # Retesting unmitigated Bullish Order Block and filling BISI FVG in Discount
+            swing_high = round(px * 1.035, 2)
+            swing_low = round(px * 0.970, 2)
+            bsl_price = round(px * 1.038, 2)
+            ssl_price = round(px * 0.968, 2)
+            range_high = round(px * 1.045, 2)
+            range_low = round(px * 0.965, 2)
+            ob_bottom = round(px * 0.992, 2)
+            ob_top = round(px * 1.004, 2)
+            fvg_bottom = round(px * 0.995, 2)
+            fvg_top = round(px * 1.005, 2)
+
+            profiles[sym] = {
+                "market_structure": "BULLISH_BOS",
+                "swing_high": swing_high,
+                "swing_low": swing_low,
+                "liquidity_event": "SSL_SWEPT",
+                "bsl_price": bsl_price,
+                "ssl_price": ssl_price,
+                "dealing_range_high": range_high,
+                "dealing_range_low": range_low,
+                "order_blocks": [
+                    {
+                        "ob_type": "BULLISH_OB",
+                        "top_price": ob_top,
+                        "bottom_price": ob_bottom,
+                        "midpoint": round((ob_top + ob_bottom) / 2.0, 2),
+                        "mitigated": False,
+                        "volume_displacement": 1.90,
+                        "is_price_in_zone": True
+                    }
+                ],
+                "fair_value_gaps": [
+                    {
+                        "fvg_type": "BISI",
+                        "top_price": fvg_top,
+                        "bottom_price": fvg_bottom,
+                        "consequent_encroachment": round((fvg_top + fvg_bottom) / 2.0, 2),
+                        "status": "PARTIALLY_FILLED",
+                        "is_price_in_fvg": True
+                    }
+                ]
+            }
+        elif sym in bearish_tier:
+            # Institutional Distribution / Breakdown
+            # Price swept BSL and broke structure downwards (BEARISH_BOS)
+            # Operating in Premium zone tapping Bearish OB
+            swing_high = round(px * 1.025, 2)
+            swing_low = round(px * 0.960, 2)
+            bsl_price = round(px * 1.028, 2)
+            ssl_price = round(px * 0.955, 2)
+            range_high = round(px * 1.035, 2)
+            range_low = round(px * 0.950, 2)
+            ob_bottom = round(px * 0.996, 2)
+            ob_top = round(px * 1.008, 2)
+            fvg_bottom = round(px * 0.994, 2)
+            fvg_top = round(px * 1.004, 2)
+
+            profiles[sym] = {
+                "market_structure": "BEARISH_BOS",
+                "swing_high": swing_high,
+                "swing_low": swing_low,
+                "liquidity_event": "BSL_SWEPT",
+                "bsl_price": bsl_price,
+                "ssl_price": ssl_price,
+                "dealing_range_high": range_high,
+                "dealing_range_low": range_low,
+                "order_blocks": [
+                    {
+                        "ob_type": "BEARISH_OB",
+                        "top_price": ob_top,
+                        "bottom_price": ob_bottom,
+                        "midpoint": round((ob_top + ob_bottom) / 2.0, 2),
+                        "mitigated": False,
+                        "volume_displacement": 1.65,
+                        "is_price_in_zone": True
+                    }
+                ],
+                "fair_value_gaps": [
+                    {
+                        "fvg_type": "SIBI",
+                        "top_price": fvg_top,
+                        "bottom_price": fvg_bottom,
+                        "consequent_encroachment": round((fvg_top + fvg_bottom) / 2.0, 2),
+                        "status": "UNFILLED",
+                        "is_price_in_fvg": True
+                    }
+                ]
+            }
+        else:
+            # Internal Consolidation / Ranging
+            swing_high = round(px * 1.020, 2)
+            swing_low = round(px * 0.980, 2)
+            profiles[sym] = {
+                "market_structure": "RANGING_CONSOLIDATION",
+                "swing_high": swing_high,
+                "swing_low": swing_low,
+                "liquidity_event": "NEUTRAL",
+                "bsl_price": swing_high,
+                "ssl_price": swing_low,
+                "dealing_range_high": round(px * 1.03, 2),
+                "dealing_range_low": round(px * 0.97, 2),
+                "order_blocks": [],
+                "fair_value_gaps": []
+            }
+
+    return profiles
+
+SMC_PROFILES: Dict[str, Dict[str, Any]] = _build_smc_profiles()
+

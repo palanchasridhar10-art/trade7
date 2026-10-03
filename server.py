@@ -33,7 +33,8 @@ from src.broker.paper import PaperBroker
 from src.broker.angel_one import AngelOneAdapter
 from src.memory.journal import TradeJournal
 from src.orchestrator.pipeline import TradingOrchestrator
-from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES
+from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES, SMC_PROFILES
+from src.data.smc import compute_smc_metrics, SMCData
 
 # Global state
 journal = TradeJournal(db_path="trade_journal.db")
@@ -92,12 +93,14 @@ def populate_initial_analysis():
         win_p = 0.975 if (tp.get("adx", 0) >= 28 and tp.get("rsi14", 50) > 55) else 0.50
         gate_passed = (win_p >= 0.68 and fund_dir == "LONG")
 
+        smc_prof = SMC_PROFILES.get(symbol, {})
         pm = temp_orch.compute_day_profit_potential(
             win_prob=win_p,
             fund_score=fund_score,
             adx=tp.get("adx", 20.0),
             volume_ratio=tp.get("volume_ratio", 1.0),
-            orderflow=ORDER_FLOW_PROFILES.get(symbol, {})
+            orderflow=ORDER_FLOW_PROFILES.get(symbol, {}),
+            smc=smc_prof
         )
 
         analysis_summary[symbol] = {
@@ -130,6 +133,7 @@ def populate_initial_analysis():
             "is_top_pick":        False,
             "reason":             f"Multi-Timeframe Fund: Daily {daily_score} | Monthly {monthly_score} | Yearly {yearly_score} (Composite: {fund_score})",
             "orderflow":          ORDER_FLOW_PROFILES.get(symbol, {}),
+            "smc":                smc_prof,
             "features":           {"gate_passed": gate_passed},
             "order":              None,
             "scanned_at":         datetime.now().isoformat(),
@@ -342,6 +346,7 @@ def auto_trading_loop():
                 "is_top_pick":        is_top,
                 "reason":             reason,
                 "orderflow":          result.get("orderflow", {}),
+                "smc":                result.get("smc", SMC_PROFILES.get(symbol, {})),
                 "features":           result.get("features", {}),
                 "order":              order_payload,
                 "scanned_at":         datetime.now().isoformat(),
@@ -523,6 +528,35 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "gate_passed_count": sum(1 for v in analysis_summary.values() if v.get("gate_passed")),
                 "scanned_at": datetime.now().isoformat()
             })
+
+        elif self.path.startswith("/api/smc"):
+            parts = self.path.split("?")
+            sym = None
+            if len(parts) > 1:
+                for param in parts[1].split("&"):
+                    if param.startswith("symbol="):
+                        sym = param.split("=")[1]
+            if sym:
+                sym_clean = sym.upper().strip()
+                if sym_clean in NIFTY50_UNIVERSE:
+                    smc_prof = SMC_PROFILES.get(sym_clean, {})
+                    px = NIFTY50_UNIVERSE[sym_clean].get("price", 1000.0)
+                    smc_data = SMCData(symbol=sym_clean, current_price=px, **smc_prof)
+                    analysis = compute_smc_metrics(smc_data)
+                    self._send_json(200, analysis.model_dump())
+                else:
+                    self._send_json(404, {"error": f"Symbol {sym_clean} not found in Nifty 50 universe"})
+            else:
+                smc_all = {}
+                for s in AUTO_WATCHLIST:
+                    px = NIFTY50_UNIVERSE[s].get("price", 1000.0)
+                    prof = SMC_PROFILES.get(s, {})
+                    smc_data = SMCData(symbol=s, current_price=px, **prof)
+                    smc_all[s] = compute_smc_metrics(smc_data).model_dump()
+                self._send_json(200, {
+                    "total": len(smc_all),
+                    "smc": smc_all
+                })
 
         else:
             self._send_json(404, {"error": "Not Found"})
@@ -823,7 +857,8 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
         "volume_ratio":       vol_ratio,
         "sector_rs_score":    65.0,
         "news_sentiment_score": 0.3,
-        "orderflow":          ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {}))
+        "orderflow":          ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {})),
+        "smc":                SMC_PROFILES.get(symbol, {})
     }
 
     return orch.run_cycle_for_symbol(

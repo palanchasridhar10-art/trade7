@@ -51,6 +51,7 @@ class TradingOrchestrator:
         adx: float,
         volume_ratio: float,
         orderflow: Dict[str, Any],
+        smc: Optional[Dict[str, Any]] = None,
         target_pct: float = 18.0,
         stop_pct: float = 5.0
     ) -> Dict[str, float]:
@@ -66,14 +67,26 @@ class TradingOrchestrator:
         imbalance = (bid_depth - ask_depth) / (bid_depth + ask_depth) if (bid_depth + ask_depth) > 0 else 0.0
         of_factor = 1.0 + (0.20 if cvd > 0 else -0.10) + max(-0.15, min(0.20, imbalance * 0.5))
 
-        alpha_score = ev_pct * fund_factor * adx_factor * vol_factor * of_factor
+        smc_factor = 1.0
+        if smc:
+            smc_bias = smc.get("bias", smc.get("smc_bias", "NEUTRAL"))
+            smc_liq = str(smc.get("liquidity_event", smc.get("smc_liquidity_event", "NEUTRAL")))
+            if smc_bias == "BULLISH":
+                smc_factor += 0.15
+            elif smc_bias == "BEARISH":
+                smc_factor -= 0.15
+            if "SWEPT" in smc_liq:
+                smc_factor += 0.10
+
+        alpha_score = ev_pct * fund_factor * adx_factor * vol_factor * of_factor * smc_factor
         return {
             "expected_profit_pct": round(ev_pct, 2),
             "leveraged_expected_profit_pct": round(ev_pct * 5.0, 2),  # 5x broker margin leverage
             "day_profit_potential_score": round(alpha_score, 2),
             "fund_factor": round(fund_factor, 3),
             "momentum_factor": round(adx_factor * vol_factor, 3),
-            "orderflow_factor": round(of_factor, 3)
+            "orderflow_factor": round(of_factor, 3),
+            "smc_factor": round(smc_factor, 3)
         }
 
     def run_cycle_for_symbol(
@@ -130,6 +143,7 @@ class TradingOrchestrator:
                 vwap=technical_inputs.get("vwap", quote.last_price),
                 volume_ratio=technical_inputs.get("volume_ratio", 1.0),
                 orderflow=technical_inputs.get("orderflow"),
+                smc=technical_inputs.get("smc"),
                 portfolio_capital=portfolio.total_capital,
                 now=now
             )
@@ -154,7 +168,8 @@ class TradingOrchestrator:
             fund_score=fund_composite,
             adx=technical_inputs.get("adx", 20.0),
             volume_ratio=technical_inputs.get("volume_ratio", 1.0),
-            orderflow=technical_inputs.get("orderflow") or {}
+            orderflow=technical_inputs.get("orderflow") or {},
+            smc=tech_signal.features
         )
 
         # Step 5: Execution Decision
@@ -231,6 +246,18 @@ class TradingOrchestrator:
                 "delta_ratio": tech_signal.features.get("delta_ratio", 0.0),
                 "institutional_block_bias": tech_signal.features.get("institutional_block_bias", 0.0),
                 "orderflow_regime": tech_signal.features.get("orderflow_regime", "BALANCED")
+            },
+            "smc": {
+                "smc_score": tech_signal.features.get("smc_score", 0.0),
+                "smc_vote": tech_signal.features.get("smc_vote", 0.0),
+                "smc_bias": tech_signal.features.get("smc_bias", "NEUTRAL"),
+                "market_structure": tech_signal.features.get("smc_structure", "RANGING_CONSOLIDATION"),
+                "liquidity_event": tech_signal.features.get("smc_liquidity_event", "NEUTRAL"),
+                "dealing_range_zone": tech_signal.features.get("smc_dealing_range_zone", "EQUILIBRIUM"),
+                "dealing_range_pct": tech_signal.features.get("smc_dealing_range_pct", 50.0),
+                "active_order_block": tech_signal.features.get("smc_active_order_block"),
+                "active_fvg": tech_signal.features.get("smc_active_fvg"),
+                "institutional_narrative": tech_signal.features.get("smc_narrative", "")
             },
             "tech_rationale": tech_signal.rationale
         }

@@ -53,12 +53,13 @@ agent1:
 
 agent2:
   weights:
-    trend: 0.25
-    momentum: 0.20
-    volume: 0.15
-    structure: 0.15
+    trend: 0.15
+    momentum: 0.15
+    volume: 0.10
+    structure: 0.10
     volatility: 0.05
     orderflow: 0.20 # 20% weight to real-time company order flow and tape dynamics
+    smc: 0.25 # 25% weight to Smart Money Concepts (BOS, CHoCH, Liquidity, OB/FVG)
   thresholds:
     long_score: 0.60
     short_score: -0.60
