@@ -27,7 +27,7 @@ class Quote(BaseModel):
     average_daily_volume: int = 1_000_000
 
 class MacroContext(BaseModel):
-    """Macroeconomic and market-wide condition metrics."""
+    """Macroeconomic and Indian market-wide financial condition metrics."""
     timestamp: datetime
     nifty50_close: float
     nifty50_1w_return: float
@@ -38,6 +38,17 @@ class MacroContext(BaseModel):
     dii_net_flow_5d_cr: float
     crude_oil_brent: float
     usd_inr: float
+
+    # Indian Stock Market Financial Condition Indicators
+    gsec_10y_yield: float = 6.92                    # 10-Year Indian Sovereign Benchmark Bond Yield (%)
+    repo_rate: float = 6.50                         # RBI Benchmark Repo Rate (%)
+    cpi_inflation: float = 4.60                     # India Retail CPI Inflation Rate (%)
+    manufacturing_pmi: float = 58.4                 # India Manufacturing PMI (>50 = Expansionary)
+    banking_system_liquidity_cr: float = 45000.0   # RBI Net Banking Liquidity Surplus/Deficit (₹ Cr)
+    forex_reserves_usd_bn: float = 692.0            # India Foreign Exchange Reserves ($ Billion)
+    nifty_pe: float = 22.4                          # Nifty 50 Trailing PE Ratio
+    nifty_pe_5y_avg: float = 21.8                   # Historical 5-Year Average PE
+    gst_collection_cr: float = 187000.0             # Monthly GST Collection Velocity (₹ Cr)
 
 class CompanyFundamentals(BaseModel):
     """Fundamental and corporate metrics for a single stock."""

@@ -199,12 +199,297 @@ def init_orchestrator(broker_instance):
 
 orchestrator = None
 
+def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool = True) -> Dict[str, Any]:
+    """Run a full 3-agent evaluation cycle using per-company data from the Nifty 50 universe and daily data manager."""
+    # ── Company data from universe & daily data manager ───────────────────
+    cdata = NIFTY50_UNIVERSE.get(symbol, {})
+    qdata = daily_manager.daily_quotes.get(symbol, {})
+    px    = float(qdata.get("price", cdata.get("price", 2000.0)))
+
+    # ── Dynamic daily macro context with Indian financial condition metrics ───
+    macro = daily_manager.macro_context or MacroContext(
+        timestamp=datetime.now(),
+        nifty50_close=25450.0,
+        nifty50_1w_return=1.45,
+        nifty50_1m_return=3.80,
+        india_vix=13.4,
+        advance_decline_ratio=1.65,
+        fii_net_flow_5d_cr=4500.0,
+        dii_net_flow_5d_cr=3200.0,
+        crude_oil_brent=74.5,
+        usd_inr=83.85,
+        gsec_10y_yield=6.92,
+        repo_rate=6.50,
+        cpi_inflation=4.60,
+        manufacturing_pmi=58.4,
+        banking_system_liquidity_cr=45000.0,
+        forex_reserves_usd_bn=692.0,
+        nifty_pe=22.4,
+        nifty_pe_5y_avg=21.8,
+        gst_collection_cr=187000.0
+    )
+
+    quote = Quote(
+        symbol=symbol, timestamp=datetime.now(),
+        last_price=px, bid_price=px - 0.2, ask_price=px + 0.2,
+        volume=int(qdata.get("volume", cdata.get("volume", 2_000_000)))
+    )
+
+    # ── Per-company fundamentals ───────────────────────────────────────────
+    fundamentals = CompanyFundamentals(
+        symbol=symbol,
+        sector=cdata.get("sector", "EQUITY"),
+        pe_ratio=cdata.get("pe", 25.0),
+        sector_pe=cdata.get("sector_pe", 25.0),
+        pb_ratio=cdata.get("pb", 3.0),
+        roe_percent=cdata.get("roe", 15.0),
+        roce_percent=cdata.get("roce", 18.0),
+        debt_to_equity=cdata.get("de", 0.5),
+        revenue_growth_yoy=cdata.get("rev_g", 10.0),
+        pat_growth_yoy=cdata.get("pat_g", 12.0),
+        promoter_holding_percent=cdata.get("promoter", 50.0),
+        promoter_pledge_percent=cdata.get("pledge", 0.0),
+        is_results_due_in_24h=cdata.get("event", False),
+        is_fo_ban=cdata.get("fo_ban", False)
+    )
+
+    # ── Per-company daily technical indicators ────────────────────────────
+    tp = daily_manager.daily_technicals.get(symbol, TECHNICAL_PROFILES.get(symbol, {}))
+    adx_val      = tp.get("adx", 22.0)
+    rsi_val      = tp.get("rsi14", 50.0)
+    macd_val     = tp.get("macd_hist", 0.5)
+    vol_ratio    = tp.get("volume_ratio", 1.0)
+    vwap_ratio   = tp.get("vwap_ratio", 1.0)
+    ema20_val    = tp.get("ema20", px * tp.get("ema20_r", 0.995))
+    ema50_val    = tp.get("ema50", px * tp.get("ema50_r", 0.980))
+    ema200_val   = tp.get("ema200", px * tp.get("ema200_r", 0.940))
+
+    tech_inputs = {
+        "ema20":              ema20_val,
+        "ema50":              ema50_val,
+        "ema200":             ema200_val,
+        "adx":                adx_val,
+        "rsi14":              rsi_val,
+        "macd_hist":          macd_val,
+        "atr14":              tp.get("atr14", px * 0.012),
+        "vwap":               tp.get("vwap", px / vwap_ratio),
+        "volume_ratio":       vol_ratio,
+        "sector_rs_score":    65.0,
+        "news_sentiment_score": daily_manager.daily_fundamentals.get(symbol, {}).get("news_sentiment", 0.3),
+        "orderflow":          daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {}))),
+        "smc":                daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
+    }
+
+    return orch.run_cycle_for_symbol(
+        symbol=symbol,
+        sector=cdata.get("sector", "EQUITY"),
+        quote=quote,
+        macro=macro,
+        fundamentals=fundamentals,
+        technical_inputs=tech_inputs,
+        enforce_timing=False,
+        execute_order=execute_order
+    )
+
+def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, force: bool = False) -> Dict[str, Any]:
+    """Evaluates all Nifty 50 stocks using decisions from Agent 1 (Fundamental + Indian Financial Conditions)
+    and Agent 2 (Technical + SMC), forms multi-agent consensus, ranks by expected profit, and automatically
+    executes the #1 top trade of the day on the broker with 5x margin MIS.
+    """
+    global top_alpha_pick, analysis_summary, auto_trade_log, recent_decisions
+
+    if not orch or not active_broker:
+        return {"status": "error", "message": "Broker not connected or orchestrator not ready."}
+
+    portfolio = active_broker.get_portfolio_state()
+    if portfolio and len(portfolio.open_positions) >= 1 and not force:
+        active_symbols = list(portfolio.open_positions.keys())
+        return {
+            "status": "already_active",
+            "message": f"Active trade already running on {active_symbols} (Single Trade Policy: Max 1 position active).",
+            "open_positions": portfolio.open_positions,
+            "top_alpha_pick": top_alpha_pick
+        }
+
+    evaluations = {}
+    qualified_candidates = []
+
+    for symbol in AUTO_WATCHLIST:
+        try:
+            result = run_symbol_cycle(symbol, orch, execute_order=False)
+            evaluations[symbol] = result
+            gate_passed = result.get("features", {}).get("gate_passed", False)
+            win_prob = result.get("tech_confidence", 0)
+            rv = result.get("risk_verdict")
+
+            if result.get("consensus_reached") and rv and rv.approved_quantity > 0 and win_prob >= 0.90:
+                qualified_candidates.append(result)
+        except Exception as e:
+            logger.error(f"[AUTO-EXECUTE] Error evaluating {symbol}: {e}")
+
+    top_cand = None
+    top_sym = None
+    executed_order = None
+
+    if qualified_candidates:
+        # Sort by Day Profit Potential Score descending
+        qualified_candidates.sort(
+            key=lambda x: x.get("profit_metrics", {}).get("day_profit_potential_score", 0.0),
+            reverse=True
+        )
+        top_cand = qualified_candidates[0]
+        top_sym = top_cand["symbol"]
+        top_alpha_pick = top_sym
+        pm = top_cand.get("profit_metrics", {})
+        ev_pct = pm.get("expected_profit_pct", 17.4)
+        lev_ev = pm.get("leveraged_expected_profit_pct", 87.0)
+        score = pm.get("day_profit_potential_score", 0.0)
+
+        print(f"[AUTO-EXECUTE] ★ EXECUTING #1 SINGLE BEST TRADE OF THE DAY: {top_sym} | WinProb: {top_cand.get('tech_confidence'):.1%} | Expected Profit: +{ev_pct}% (5x Leveraged: +{lev_ev}%) | Alpha Score: {score}")
+
+        executed_order = orch.execute_approved_trade(
+            symbol=top_sym,
+            sector=top_cand["sector"],
+            proposal=top_cand["proposal"],
+            risk_verdict=top_cand["risk_verdict"],
+            fund_signal=top_cand["fund_signal"],
+            tech_signal=top_cand["tech_signal"],
+            cycle_id=top_cand["cycle_id"],
+            decision_id=top_cand["decision_id"]
+        )
+
+    # Update per-company analysis snapshot and audit logs for all 50 symbols
+    for symbol in AUTO_WATCHLIST:
+        result = evaluations.get(symbol, {})
+        cdata = NIFTY50_UNIVERSE.get(symbol, {})
+        pm = result.get("profit_metrics", {})
+        gate_passed = result.get("features", {}).get("gate_passed", False)
+        win_prob = result.get("tech_confidence", 0)
+
+        if symbol == top_sym and executed_order:
+            action = "TRADE"
+            is_top = True
+            order_payload = executed_order.model_dump()
+            reason = f"★ #1 Alpha Pick of the Day: Executed {executed_order.quantity} units (5x Margin MIS) | Expected Profit: +{pm.get('expected_profit_pct')}% (Leveraged: +{pm.get('leveraged_expected_profit_pct')}%)"
+        elif top_sym:
+            action = "NO_TRADE"
+            is_top = False
+            order_payload = None
+            top_pm = top_cand.get("profit_metrics", {})
+            if gate_passed:
+                reason = f"Single Best Trade Focus: Skipped in favor of #1 profit candidate {top_sym} (+{top_pm.get('expected_profit_pct')}%)"
+            else:
+                reason = result.get("reason", "Consensus not reached")
+        else:
+            action = "NO_TRADE"
+            is_top = False
+            order_payload = None
+            reason = result.get("reason", "No candidate met strict profit thresholds")
+
+        analysis_summary[symbol] = {
+            "symbol":             symbol,
+            "sector":             cdata.get("sector", "EQUITY"),
+            "price":              cdata.get("price", 0),
+            "fund_direction":     result.get("fund_direction", "NEUTRAL"),
+            "fund_confidence":    result.get("fund_confidence", 0.0),
+            "fund_score":         result.get("fund_score", 50.0),
+            "fund_daily_score":   result.get("fund_daily_score", 50.0),
+            "fund_monthly_score": result.get("fund_monthly_score", 50.0),
+            "fund_yearly_score":  result.get("fund_yearly_score", 50.0),
+            "fund_rationale":     result.get("fund_rationale", []),
+            "fund_features":      result.get("fund_features", {}),
+            "tech_direction":     result.get("tech_direction", "NEUTRAL"),
+            "action":             action,
+            "gate_passed":        gate_passed,
+            "win_prob":           round(win_prob, 4),
+            "consensus":          result.get("consensus_reached", False),
+            "profit_metrics":     pm,
+            "profit_potential_score": pm.get("day_profit_potential_score", 0.0),
+            "expected_profit_pct": pm.get("expected_profit_pct", 0.0),
+            "leveraged_expected_profit_pct": pm.get("leveraged_expected_profit_pct", 0.0),
+            "is_top_pick":        is_top,
+            "reason":             reason,
+            "orderflow":          result.get("orderflow", {}),
+            "smc":                result.get("smc", SMC_PROFILES.get(symbol, {})),
+            "features":           result.get("features", {}),
+            "order":              order_payload,
+            "scanned_at":         datetime.now().isoformat(),
+            "scan_no":            scan_count,
+        }
+
+        event = {
+            "scan":        scan_count,
+            "timestamp":   datetime.now().isoformat(),
+            "symbol":      symbol,
+            "sector":      cdata.get("sector", "EQUITY"),
+            "action":      action,
+            "reason":      reason,
+            "gate_passed": gate_passed,
+            "win_prob":    win_prob,
+            "order":       order_payload
+        }
+        auto_trade_log.append(event)
+
+        recent_decisions.append({
+            "timestamp":          datetime.now().isoformat(),
+            "symbol":             symbol,
+            "fund_direction":     result.get("fund_direction", "NEUTRAL"),
+            "fund_score":         result.get("fund_score", 50.0),
+            "fund_daily_score":   result.get("fund_daily_score", 50.0),
+            "fund_monthly_score": result.get("fund_monthly_score", 50.0),
+            "fund_yearly_score":  result.get("fund_yearly_score", 50.0),
+            "tech_direction":     result.get("tech_direction", "NEUTRAL"),
+            "consensus":          result.get("consensus_reached", False),
+            "action":             action,
+            "reason":             reason,
+            "auto":               True,
+            "orderflow":          result.get("orderflow", {})
+        })
+
+    if len(auto_trade_log) > 200:
+        auto_trade_log = auto_trade_log[-200:]
+    if len(recent_decisions) > 100:
+        recent_decisions = recent_decisions[-100:]
+
+    if executed_order and top_cand:
+        fund_feat = top_cand.get("fund_features", {})
+        return {
+            "status": "success",
+            "message": f"Successfully auto-executed #1 trade on {top_sym} taking decision from Agent 1 and Agent 2!",
+            "symbol": top_sym,
+            "order": executed_order.model_dump(),
+            "agent1_decision": {
+                "direction": top_cand.get("fund_direction"),
+                "confidence": top_cand.get("fund_confidence"),
+                "score": top_cand.get("fund_score"),
+                "daily_score": top_cand.get("fund_daily_score"),
+                "monthly_score": top_cand.get("fund_monthly_score"),
+                "yearly_score": top_cand.get("fund_yearly_score"),
+                "indian_financial_conditions": fund_feat.get("indian_financial_conditions", {})
+            },
+            "agent2_decision": {
+                "direction": top_cand.get("tech_direction"),
+                "confidence": top_cand.get("tech_confidence"),
+                "smc": top_cand.get("smc", {}),
+                "orderflow": top_cand.get("orderflow", {})
+            },
+            "consensus": top_cand.get("consensus_reached"),
+            "win_prob": top_cand.get("tech_confidence"),
+            "profit_metrics": top_cand.get("profit_metrics", {})
+        }
+    else:
+        return {
+            "status": "no_trade",
+            "message": "Evaluated all 50 stocks with Agent 1 and Agent 2, but no candidate met the strict >=90% win probability and consensus threshold today.",
+            "candidates_evaluated": len(AUTO_WATCHLIST)
+        }
+
 def auto_trading_loop():
     """Background thread: scans watchlist every 60s and executes ONLY the single most profitable trade of the day.
     
     1. Checks if an open position already exists (Strictly 1 trade at a time).
-    2. If no position is open, runs evaluation on all 50 stocks with execute_order=False.
-    3. Ranks qualified candidates by day profit potential score (EV % * Fundamentals * Momentum * Order Flow).
+    2. If no position is open, runs evaluation on all 50 stocks taking decisions from Agent 1 & Agent 2.
+    3. Formulates multi-agent consensus and ranks qualified candidates by Day Profit Potential Score.
     4. Selects the #1 Top Pick and executes bracket order with 90% capital and 5x broker margin.
     5. Leaves all other 49 stocks in NO_TRADE with explicit reason indicating they were held back for the top pick.
     """
@@ -267,151 +552,10 @@ def auto_trading_loop():
                 time.sleep(5)
             continue
 
-        print(f"[AUTO-TRADE] Scan #{scan_count} — evaluating all {len(AUTO_WATCHLIST)} symbols to pick the #1 most profitable trade of the day...")
-
-        evaluations = {}
-        qualified_candidates = []
-
-        for symbol in AUTO_WATCHLIST:
-            if not auto_trading_active:
-                break
-            try:
-                result = run_symbol_cycle(symbol, orchestrator, execute_order=False)
-                evaluations[symbol] = result
-                gate_passed = result.get("features", {}).get("gate_passed", False)
-                win_prob = result.get("tech_confidence", 0)
-                rv = result.get("risk_verdict")
-
-                if result.get("consensus_reached") and rv and rv.approved_quantity > 0 and win_prob >= 0.90:
-                    qualified_candidates.append(result)
-            except Exception as e:
-                logger.error(f"[AUTO-TRADE] Error evaluating {symbol}: {e}")
-
-        top_cand = None
-        top_sym = None
-        executed_order = None
-
-        if qualified_candidates:
-            # Sort by Day Profit Potential Score descending
-            qualified_candidates.sort(
-                key=lambda x: x.get("profit_metrics", {}).get("day_profit_potential_score", 0.0),
-                reverse=True
-            )
-            top_cand = qualified_candidates[0]
-            top_sym = top_cand["symbol"]
-            top_alpha_pick = top_sym
-            pm = top_cand.get("profit_metrics", {})
-            ev_pct = pm.get("expected_profit_pct", 17.4)
-            lev_ev = pm.get("leveraged_expected_profit_pct", 87.0)
-            score = pm.get("day_profit_potential_score", 0.0)
-
-            print(f"[AUTO-TRADE] ★ EXECUTING #1 SINGLE BEST TRADE OF THE DAY: {top_sym} | WinProb: {top_cand.get('tech_confidence'):.1%} | Expected Profit: +{ev_pct}% (5x Leveraged: +{lev_ev}%) | Alpha Score: {score}")
-
-            executed_order = orchestrator.execute_approved_trade(
-                symbol=top_sym,
-                sector=top_cand["sector"],
-                proposal=top_cand["proposal"],
-                risk_verdict=top_cand["risk_verdict"],
-                fund_signal=top_cand["fund_signal"],
-                tech_signal=top_cand["tech_signal"],
-                cycle_id=top_cand["cycle_id"],
-                decision_id=top_cand["decision_id"]
-            )
-
-        # Update per-company analysis snapshot and logs for all 50 symbols
-        trades_placed = 1 if executed_order else 0
-        for symbol in AUTO_WATCHLIST:
-            result = evaluations.get(symbol, {})
-            cdata = NIFTY50_UNIVERSE.get(symbol, {})
-            pm = result.get("profit_metrics", {})
-            gate_passed = result.get("features", {}).get("gate_passed", False)
-            win_prob = result.get("tech_confidence", 0)
-
-            if symbol == top_sym and executed_order:
-                action = "TRADE"
-                is_top = True
-                order_payload = executed_order.model_dump()
-                reason = f"★ #1 Alpha Pick of the Day: Executed {executed_order.quantity} units (5x Margin MIS) | Expected Profit: +{pm.get('expected_profit_pct')}% (Leveraged: +{pm.get('leveraged_expected_profit_pct')}%)"
-            elif top_sym:
-                action = "NO_TRADE"
-                is_top = False
-                order_payload = None
-                top_pm = top_cand.get("profit_metrics", {})
-                if gate_passed:
-                    reason = f"Single Best Trade Focus: Skipped in favor of #1 profit candidate {top_sym} (+{top_pm.get('expected_profit_pct')}%)"
-                else:
-                    reason = result.get("reason", "Consensus not reached")
-            else:
-                action = "NO_TRADE"
-                is_top = False
-                order_payload = None
-                reason = result.get("reason", "No candidate met strict profit thresholds")
-
-            analysis_summary[symbol] = {
-                "symbol":             symbol,
-                "sector":             cdata.get("sector", "EQUITY"),
-                "price":              cdata.get("price", 0),
-                "fund_direction":     result.get("fund_direction", "NEUTRAL"),
-                "fund_confidence":    result.get("fund_confidence", 0.0),
-                "fund_score":         result.get("fund_score", 50.0),
-                "fund_daily_score":   result.get("fund_daily_score", 50.0),
-                "fund_monthly_score": result.get("fund_monthly_score", 50.0),
-                "fund_yearly_score":  result.get("fund_yearly_score", 50.0),
-                "fund_rationale":     result.get("fund_rationale", []),
-                "fund_features":      result.get("fund_features", {}),
-                "tech_direction":     result.get("tech_direction", "NEUTRAL"),
-                "action":             action,
-                "gate_passed":        gate_passed,
-                "win_prob":           round(win_prob, 4),
-                "consensus":          result.get("consensus_reached", False),
-                "profit_metrics":     pm,
-                "profit_potential_score": pm.get("day_profit_potential_score", 0.0),
-                "expected_profit_pct": pm.get("expected_profit_pct", 0.0),
-                "leveraged_expected_profit_pct": pm.get("leveraged_expected_profit_pct", 0.0),
-                "is_top_pick":        is_top,
-                "reason":             reason,
-                "orderflow":          result.get("orderflow", {}),
-                "smc":                result.get("smc", SMC_PROFILES.get(symbol, {})),
-                "features":           result.get("features", {}),
-                "order":              order_payload,
-                "scanned_at":         datetime.now().isoformat(),
-                "scan_no":            scan_count,
-            }
-
-            event = {
-                "scan":        scan_count,
-                "timestamp":   datetime.now().isoformat(),
-                "symbol":      symbol,
-                "sector":      cdata.get("sector", "EQUITY"),
-                "action":      action,
-                "reason":      reason,
-                "gate_passed": gate_passed,
-                "win_prob":    win_prob,
-                "order":       order_payload
-            }
-            auto_trade_log.append(event)
-
-            recent_decisions.append({
-                "timestamp":          datetime.now().isoformat(),
-                "symbol":             symbol,
-                "fund_direction":     result.get("fund_direction", "NEUTRAL"),
-                "fund_score":         result.get("fund_score", 50.0),
-                "fund_daily_score":   result.get("fund_daily_score", 50.0),
-                "fund_monthly_score": result.get("fund_monthly_score", 50.0),
-                "fund_yearly_score":  result.get("fund_yearly_score", 50.0),
-                "tech_direction":     result.get("tech_direction", "NEUTRAL"),
-                "consensus":          result.get("consensus_reached", False),
-                "action":             action,
-                "reason":             reason,
-                "auto":               True,
-                "orderflow":          result.get("orderflow", {})
-            })
-
-        if len(auto_trade_log) > 200:
-            auto_trade_log = auto_trade_log[-200:]
-        if len(recent_decisions) > 100:
-            recent_decisions = recent_decisions[-100:]
-
+        print(f"[AUTO-TRADE] Scan #{scan_count} — evaluating all {len(AUTO_WATCHLIST)} symbols with Agent 1 and Agent 2 to pick the #1 most profitable trade of the day...")
+        res = execute_single_best_trade(orchestrator, scan_count=scan_count)
+        trades_placed = 1 if res.get("status") == "success" else 0
+        top_sym = res.get("symbol")
         print(f"[AUTO-TRADE] Scan #{scan_count} complete — {trades_placed} trade placed ({top_sym or 'None'}). Sleeping {AUTO_SCAN_INTERVAL_SECONDS}s...")
 
         # Sleep in 5s increments so loop can be stopped quickly
@@ -599,6 +743,21 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     self._send_json(404, {"error": f"Symbol {sym_clean} not found in Nifty 50 universe"})
             else:
                 self._send_json(200, daily_manager.get_status())
+
+        elif self.path == "/api/indian-financial-conditions":
+            self._send_json(200, daily_manager.get_indian_financial_conditions())
+
+        elif self.path == "/api/auto-execute":
+            if not is_broker_connected or not orchestrator:
+                active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
+                daily_manager.broker = active_broker
+                active_client_code = "PAPER_AUTO"
+                active_mode = "paper"
+                is_broker_connected = True
+                orchestrator = init_orchestrator(active_broker)
+
+            res = execute_single_best_trade(orchestrator, scan_count=1, force=False)
+            self._send_json(200, res)
 
         else:
             self._send_json(404, {"error": "Not Found"})
@@ -847,91 +1006,22 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "top_alpha_pick": top_alpha_pick
             })
 
+        elif self.path == "/api/auto-execute":
+            if not is_broker_connected or not orchestrator:
+                print("[AUTO-EXECUTE] No broker connected — initializing Paper Broker session...")
+                active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
+                daily_manager.broker = active_broker
+                active_client_code = "PAPER_AUTO"
+                active_mode = "paper"
+                is_broker_connected = True
+                orchestrator = init_orchestrator(active_broker)
+
+            force = payload.get("force", False)
+            res = execute_single_best_trade(orchestrator, scan_count=1, force=force)
+            self._send_json(200, res)
+
         else:
             self._send_json(404, {"error": "Not Found"})
-
-def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool = True) -> Dict[str, Any]:
-    """Run a full 3-agent evaluation cycle using per-company data from the Nifty 50 universe and daily data manager."""
-    # ── Company data from universe & daily data manager ───────────────────
-    cdata = NIFTY50_UNIVERSE.get(symbol, {})
-    qdata = daily_manager.daily_quotes.get(symbol, {})
-    px    = float(qdata.get("price", cdata.get("price", 2000.0)))
-
-    # ── Dynamic daily macro context ───────────────────────────────────────
-    macro = daily_manager.macro_context or MacroContext(
-        timestamp=datetime.now(),
-        nifty50_close=25450.0,
-        nifty50_1w_return=1.45,
-        nifty50_1m_return=3.80,
-        india_vix=13.4,
-        advance_decline_ratio=1.65,
-        fii_net_flow_5d_cr=4500.0,
-        dii_net_flow_5d_cr=3200.0,
-        crude_oil_brent=74.5,
-        usd_inr=83.85
-    )
-
-    quote = Quote(
-        symbol=symbol, timestamp=datetime.now(),
-        last_price=px, bid_price=px - 0.2, ask_price=px + 0.2,
-        volume=int(qdata.get("volume", cdata.get("volume", 2_000_000)))
-    )
-
-    # ── Per-company fundamentals ───────────────────────────────────────────
-    fundamentals = CompanyFundamentals(
-        symbol=symbol,
-        sector=cdata.get("sector", "EQUITY"),
-        pe_ratio=cdata.get("pe", 25.0),
-        sector_pe=cdata.get("sector_pe", 25.0),
-        pb_ratio=cdata.get("pb", 3.0),
-        roe_percent=cdata.get("roe", 15.0),
-        roce_percent=cdata.get("roce", 18.0),
-        debt_to_equity=cdata.get("de", 0.5),
-        revenue_growth_yoy=cdata.get("rev_g", 10.0),
-        pat_growth_yoy=cdata.get("pat_g", 12.0),
-        promoter_holding_percent=cdata.get("promoter", 50.0),
-        promoter_pledge_percent=cdata.get("pledge", 0.0),
-        is_results_due_in_24h=cdata.get("event", False),
-        is_fo_ban=cdata.get("fo_ban", False)
-    )
-
-    # ── Per-company daily technical indicators ────────────────────────────
-    tp = daily_manager.daily_technicals.get(symbol, TECHNICAL_PROFILES.get(symbol, {}))
-    adx_val      = tp.get("adx", 22.0)
-    rsi_val      = tp.get("rsi14", 50.0)
-    macd_val     = tp.get("macd_hist", 0.5)
-    vol_ratio    = tp.get("volume_ratio", 1.0)
-    vwap_ratio   = tp.get("vwap_ratio", 1.0)
-    ema20_val    = tp.get("ema20", px * tp.get("ema20_r", 0.995))
-    ema50_val    = tp.get("ema50", px * tp.get("ema50_r", 0.980))
-    ema200_val   = tp.get("ema200", px * tp.get("ema200_r", 0.940))
-
-    tech_inputs = {
-        "ema20":              ema20_val,
-        "ema50":              ema50_val,
-        "ema200":             ema200_val,
-        "adx":                adx_val,
-        "rsi14":              rsi_val,
-        "macd_hist":          macd_val,
-        "atr14":              tp.get("atr14", px * 0.012),
-        "vwap":               tp.get("vwap", px / vwap_ratio),
-        "volume_ratio":       vol_ratio,
-        "sector_rs_score":    65.0,
-        "news_sentiment_score": daily_manager.daily_fundamentals.get(symbol, {}).get("news_sentiment", 0.3),
-        "orderflow":          daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {}))),
-        "smc":                daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
-    }
-
-    return orch.run_cycle_for_symbol(
-        symbol=symbol,
-        sector=cdata.get("sector", "EQUITY"),
-        quote=quote,
-        macro=macro,
-        fundamentals=fundamentals,
-        technical_inputs=tech_inputs,
-        enforce_timing=False,
-        execute_order=execute_order
-    )
 
 def main():
     port = int(os.getenv("PORT", 10000))

@@ -78,7 +78,7 @@ class DailyDataManager:
         """Populate initial daily state from current universe configurations."""
         now = NSECalendar.get_ist_now()
 
-        # Shared Macro Context
+        # Shared Macro Context & Indian Financial Conditions
         self.macro_context = MacroContext(
             timestamp=now,
             nifty50_close=25450.0,
@@ -89,7 +89,16 @@ class DailyDataManager:
             fii_net_flow_5d_cr=4500.0,
             dii_net_flow_5d_cr=3200.0,
             crude_oil_brent=74.5,
-            usd_inr=83.85
+            usd_inr=83.85,
+            gsec_10y_yield=6.92,
+            repo_rate=6.50,
+            cpi_inflation=4.60,
+            manufacturing_pmi=58.4,
+            banking_system_liquidity_cr=45000.0,
+            forex_reserves_usd_bn=692.0,
+            nifty_pe=22.4,
+            nifty_pe_5y_avg=21.8,
+            gst_collection_cr=187000.0
         )
 
         # 1. Fundamentals (Agent 1)
@@ -190,23 +199,42 @@ class DailyDataManager:
         self.last_updated_at = now
         self.update_count += 1
 
-        # ── 1. Daily Macro Context Update ──────────────────────────────────
+        # ── 1. Daily Macro Context & Indian Financial Conditions Update ───
         vix_drift = -0.3 if market_bias == "BULLISH" else 0.5
         new_vix = max(10.5, min(24.0, (self.macro_context.india_vix if self.macro_context else 13.4) + vix_drift))
         fii_daily = 350.0 if market_bias == "BULLISH" else -250.0
         dii_daily = 220.0 if market_bias == "BULLISH" else 150.0
 
+        # Evolve Indian Stock Market Financial Condition Metrics
+        yield_drift = -0.03 if market_bias == "BULLISH" else 0.04
+        new_yield = round(max(6.50, min(7.60, (self.macro_context.gsec_10y_yield if self.macro_context else 6.92) + yield_drift)), 2)
+        liq_drift = 3500.0 if market_bias == "BULLISH" else -4000.0
+        new_liq = round((self.macro_context.banking_system_liquidity_cr if self.macro_context else 45000.0) + liq_drift, 0)
+        new_close = 25450.0 + (120.0 if market_bias == "BULLISH" else -90.0)
+        new_pe = round(22.4 * (new_close / 25450.0), 2)
+        new_pmi = 58.6 if market_bias == "BULLISH" else 56.5
+        new_cpi = 4.50 if market_bias == "BULLISH" else 4.75
+
         self.macro_context = MacroContext(
             timestamp=now,
-            nifty50_close=25450.0 + (120.0 if market_bias == "BULLISH" else -90.0),
+            nifty50_close=new_close,
             nifty50_1w_return=1.65,
             nifty50_1m_return=3.95,
             india_vix=round(new_vix, 2),
             advance_decline_ratio=1.75 if market_bias == "BULLISH" else 0.85,
-            fii_net_flow_5d_cr=4850.0,
-            dii_net_flow_5d_cr=3420.0,
+            fii_net_flow_5d_cr=4850.0 if market_bias == "BULLISH" else 3100.0,
+            dii_net_flow_5d_cr=3420.0 if market_bias == "BULLISH" else 2800.0,
             crude_oil_brent=73.8,
-            usd_inr=83.80
+            usd_inr=83.80,
+            gsec_10y_yield=new_yield,
+            repo_rate=6.50,
+            cpi_inflation=new_cpi,
+            manufacturing_pmi=new_pmi,
+            banking_system_liquidity_cr=new_liq,
+            forex_reserves_usd_bn=694.0,
+            nifty_pe=new_pe,
+            nifty_pe_5y_avg=21.8,
+            gst_collection_cr=188500.0
         )
 
         symbols_updated = 0
@@ -508,11 +536,40 @@ class DailyDataManager:
             "timestamp": now_str
         }
 
+    def get_indian_financial_conditions(self) -> Dict[str, Any]:
+        """Returns the current Indian Stock Market Financial Condition Index and key health metrics."""
+        if not self.macro_context:
+            return {}
+        if self.agent1 and hasattr(self.agent1, "_score_indian_financial_conditions"):
+            _, _, metrics = self.agent1._score_indian_financial_conditions(self.macro_context)
+            return metrics
+        try:
+            from src.agents.agent1_fundamental import FundamentalAnalystAgent
+            agent = FundamentalAnalystAgent()
+            _, _, metrics = agent._score_indian_financial_conditions(self.macro_context)
+            return metrics
+        except Exception:
+            pass
+        return {
+            "ifci_score": 72.0,
+            "ifci_status": "EXPANSIONARY" if self.macro_context.india_vix < 15 else "BALANCED",
+            "gsec_10y_yield": self.macro_context.gsec_10y_yield,
+            "repo_rate": self.macro_context.repo_rate,
+            "cpi_inflation": self.macro_context.cpi_inflation,
+            "manufacturing_pmi": self.macro_context.manufacturing_pmi,
+            "banking_liquidity_cr": self.macro_context.banking_system_liquidity_cr,
+            "forex_reserves_usd_bn": self.macro_context.forex_reserves_usd_bn,
+            "nifty_pe": self.macro_context.nifty_pe,
+            "nifty_pe_5y_avg": self.macro_context.nifty_pe_5y_avg,
+            "india_vix": self.macro_context.india_vix
+        }
+
     def get_status(self) -> Dict[str, Any]:
         """Returns the current operational status of the daily data update engine."""
         now = NSECalendar.get_ist_now()
         is_today = (self.active_market_date == now.date())
         time_diff = (now - self.last_updated_at).total_seconds()
+        ifci = self.get_indian_financial_conditions()
 
         return {
             "status": "UP_TO_DATE" if is_today else "ROLLOVER_PENDING",
@@ -529,8 +586,18 @@ class DailyDataManager:
                 "india_vix": self.macro_context.india_vix if self.macro_context else 13.4,
                 "fii_net_flow_5d_cr": self.macro_context.fii_net_flow_5d_cr if self.macro_context else 4500.0,
                 "dii_net_flow_5d_cr": self.macro_context.dii_net_flow_5d_cr if self.macro_context else 3200.0,
-                "advance_decline_ratio": self.macro_context.advance_decline_ratio if self.macro_context else 1.65
+                "advance_decline_ratio": self.macro_context.advance_decline_ratio if self.macro_context else 1.65,
+                "gsec_10y_yield": self.macro_context.gsec_10y_yield if self.macro_context else 6.92,
+                "repo_rate": self.macro_context.repo_rate if self.macro_context else 6.50,
+                "cpi_inflation": self.macro_context.cpi_inflation if self.macro_context else 4.60,
+                "manufacturing_pmi": self.macro_context.manufacturing_pmi if self.macro_context else 58.4,
+                "banking_liquidity_cr": self.macro_context.banking_system_liquidity_cr if self.macro_context else 45000.0,
+                "forex_reserves_usd_bn": self.macro_context.forex_reserves_usd_bn if self.macro_context else 692.0,
+                "nifty_pe": self.macro_context.nifty_pe if self.macro_context else 22.4,
+                "ifci_status": ifci.get("ifci_status", "EXPANSIONARY"),
+                "ifci_score": ifci.get("ifci_score", 72.0)
             },
+            "indian_financial_conditions": ifci,
             "recent_rollovers": self.update_history[-5:]
         }
 

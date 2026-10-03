@@ -551,6 +551,28 @@
         </div>
       </div>
 
+      <!-- 🇮🇳 Indian Stock Market Financial Condition (IFCI) Overlay -->
+      <div style="background: rgba(255, 153, 51, 0.05); border: 1px solid rgba(255, 153, 51, 0.3); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+          <div style="font-size: 12px; font-weight: 700; color: #FBBF24; display: flex; align-items: center; gap: 8px;">
+            <span>🇮🇳</span>
+            <span>INDIAN STOCK MARKET FINANCIAL CONDITIONS (IFCI MACRO OVERLAY)</span>
+          </div>
+          <span id="fmMIfciBadge" class="badge-pill pill-green">EXPANSIONARY · 68.5</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; font-size: 11px; font-family: var(--font-mono); margin-bottom: 8px;">
+          <div><span style="color:var(--text-muted);">10Y Yield:</span> <strong id="fmIfciGsec" style="color:var(--accent-cyan);">6.92%</strong></div>
+          <div><span style="color:var(--text-muted);">Repo Rate:</span> <strong id="fmIfciRepo" style="color:#fff;">6.50%</strong></div>
+          <div><span style="color:var(--text-muted);">Liquidity:</span> <strong id="fmIfciLiquidity" style="color:var(--accent-green);">+₹45k Cr</strong></div>
+          <div><span style="color:var(--text-muted);">CPI:</span> <strong id="fmIfciCpi" style="color:var(--accent-cyan);">4.60%</strong></div>
+          <div><span style="color:var(--text-muted);">PMI:</span> <strong id="fmIfciPmi" style="color:var(--accent-green);">58.4</strong></div>
+          <div><span style="color:var(--text-muted);">Nifty PE:</span> <strong id="fmIfciNiftyPe" style="color:var(--accent-yellow);">22.4x</strong></div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted);" id="fmIfciRationale">
+          Indian market financial conditions are supportive of equity valuations with surplus liquidity and moderate inflation.
+        </div>
+      </div>
+
       <!-- Quick Action Inside Modal -->
       <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
         <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">
@@ -866,6 +888,77 @@
       </div>
     </div>
 
+    <!-- 🇮🇳 Indian Stock Market Financial Condition (IFCI) Dynamic Daily Card -->
+    <div id="indianFinancialConditionsCard" style="background: linear-gradient(135deg, rgba(255, 153, 51, 0.08) 0%, rgba(18, 136, 7, 0.08) 100%); border: 1px solid rgba(255, 153, 51, 0.35); border-radius: var(--radius-md); padding: 18px 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom: 14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size: 26px;">🇮🇳</span>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h3 style="font-size:16px; font-weight:800; color:#fff; margin:0; letter-spacing:0.5px;">INDIAN STOCK MARKET FINANCIAL CONDITIONS</h3>
+              <span id="ifciRegimeBadge" class="badge-pill pill-green" style="font-size:11px; padding:3px 10px; font-weight:800;">EXPANSIONARY</span>
+            </div>
+            <p style="font-size:11px; color:var(--text-muted); margin:2px 0 0 0;">
+              Daily Macro Financial Conditions Index (IFCI) updated dynamically · Integrated into Agent 1 Fundamentals & Agent 2 Execution
+            </p>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="text-align:right;">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-family:var(--font-mono);">IFCI Score</div>
+            <div id="ifciScoreValue" style="font-size:22px; font-weight:800; color:var(--accent-green); font-family:var(--font-mono);">68.5 / 100</div>
+          </div>
+          <button id="btnAutoExecuteTop" class="btn btn-success" style="background: linear-gradient(135deg, #10B981, #059669); border-color: #34D399; font-weight: 700; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); padding: 8px 16px; font-size: 13px;" onclick="triggerAutoExecute()">
+            ⚡ Auto-Execute Trade Now
+          </button>
+        </div>
+      </div>
+
+      <!-- 6-Metric Indian Financial Conditions Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+        <div style="background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">10Y G-Sec Yield</div>
+          <div id="ifciGsec" style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 2px;">6.92%</div>
+          <div style="font-size: 10px; color: var(--text-muted);">Sovereign Cost (≤7.1% Bullish)</div>
+        </div>
+
+        <div style="background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">RBI Repo Rate</div>
+          <div id="ifciRepo" style="font-size: 15px; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 2px;">6.50%</div>
+          <div style="font-size: 10px; color: var(--text-muted);">Neutral Monetary Stance</div>
+        </div>
+
+        <div style="background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Banking Liquidity</div>
+          <div id="ifciLiquidity" style="font-size: 15px; font-weight: 700; color: var(--accent-green); font-family: var(--font-mono); margin-top: 2px;">+₹45,000 Cr</div>
+          <div style="font-size: 10px; color: var(--text-muted);">Surplus System Liquidity</div>
+        </div>
+
+        <div style="background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">CPI Inflation</div>
+          <div id="ifciCpi" style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 2px;">4.60%</div>
+          <div style="font-size: 10px; color: var(--text-muted);">Target: 4±2% Tolerance</div>
+        </div>
+
+        <div style="background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Manufacturing PMI</div>
+          <div id="ifciPmi" style="font-size: 15px; font-weight: 700; color: var(--accent-green); font-family: var(--font-mono); margin-top: 2px;">58.4</div>
+          <div style="font-size: 10px; color: var(--text-muted);">High Growth (>50 Expansion)</div>
+        </div>
+
+        <div style="background: rgba(10, 14, 24, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Nifty 50 Trailing PE</div>
+          <div id="ifciNiftyPe" style="font-size: 15px; font-weight: 700; color: var(--accent-yellow); font-family: var(--font-mono); margin-top: 2px;">22.4x</div>
+          <div style="font-size: 10px; color: var(--text-muted);">5Y Avg: 21.8x · Fair Value</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:11px; color:var(--text-muted); font-family:var(--font-mono); border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
+        <span id="ifciDriversText">Drivers: Surplus banking liquidity (+₹45,000 Cr) · Robust PMI (58.4) · FII/DII net flows (+₹7,700 Cr)</span>
+        <span id="ifciUpdatedDate" style="color:var(--accent-cyan);">Daily Synchronized: 2026-10-03</span>
+      </div>
+    </div>
+
     <!-- Auto-Trading Status Banner -->
     <div id="autoTradingBanner" style="display:none; background: linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(0,240,255,0.08) 100%); border: 1px solid rgba(16,185,129,0.35); border-radius: var(--radius-md); padding: 14px 22px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -1089,6 +1182,9 @@
       </div>
 
       <div style="display: flex; gap: 10px;">
+        <button id="btnAutoExecute" class="btn btn-success" style="background: linear-gradient(135deg, #10B981, #059669); border-color: #34D399; font-weight: 700; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);" onclick="triggerAutoExecute()">
+          ⚡ Auto-Execute Trade Now
+        </button>
         <button id="btnRunCycle" class="btn btn-primary" onclick="triggerDecisionCycle()">
           ⚡ Run Manual Cycle
         </button>
@@ -1434,6 +1530,85 @@
       }
     }
 
+    async function triggerAutoExecute() {
+      const btn = document.getElementById('btnAutoExecute');
+      const btnTop = document.getElementById('btnAutoExecuteTop');
+      if (btn) { btn.disabled = true; btn.innerHTML = '⚡ Auto-Executing...'; }
+      if (btnTop) { btnTop.disabled = true; btnTop.innerHTML = '⚡ Auto-Executing...'; }
+
+      try {
+        const res = await fetch('/api/auto-execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: false })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          showTradeToast(`🚀 AUTO-EXECUTE SUCCESS: ${data.symbol} | 5x Leveraged Profit: +${data.profit_metrics.leveraged_expected_profit_pct}%`);
+          alert(`🚀 Single Best Trade Auto-Executed Taking Decisions from Agent 1 and Agent 2!\n\nSymbol: ${data.symbol}\nExpected Profit: +${data.profit_metrics.expected_profit_pct}% (5x Leveraged: +${data.profit_metrics.leveraged_expected_profit_pct}%)\nAgent 1 Score: ${data.agent1_decision.score} / 100 (${data.agent1_decision.direction})\nAgent 2 Win Prob: ${(data.win_prob * 100).toFixed(1)}% (${data.agent2_decision.direction})\nConsensus: AGREED\nOrder Executed on Broker: ${data.order.quantity} units (5x Margin MIS)\nTarget: ₹${data.order.target_price.toFixed(2)} | Stop Loss: ₹${data.order.stop_loss.toFixed(2)}`);
+        } else if (data.status === 'already_active') {
+          alert(`ℹ️ ${data.message}`);
+        } else if (data.status === 'no_trade') {
+          alert(`⚠️ Auto-Execution completed: No stock satisfied the multi-agent >=90% win probability and consensus threshold today.`);
+        } else {
+          alert(`Auto-execution response: ${data.message || JSON.stringify(data)}`);
+        }
+        updateDashboard();
+        fetchFullAnalysis();
+      } catch (err) {
+        alert('Auto-execute error: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '⚡ Auto-Execute Trade Now'; }
+        if (btnTop) { btnTop.disabled = false; btnTop.innerHTML = '⚡ Auto-Execute Trade Now'; }
+      }
+    }
+
+    async function updateIndianFinancialConditionsUI() {
+      try {
+        const res = await fetch('/api/indian-financial-conditions');
+        const ifci = await res.json();
+        if (!ifci || !ifci.score) return;
+
+        const scoreEl = document.getElementById('ifciScoreValue');
+        const badgeEl = document.getElementById('ifciRegimeBadge');
+        if (scoreEl) scoreEl.textContent = `${ifci.score.toFixed(1)} / 100`;
+        if (badgeEl) {
+          badgeEl.textContent = ifci.regime;
+          badgeEl.className = ifci.regime === 'EXPANSIONARY' ? 'badge-pill pill-green' : (ifci.regime === 'RESTRICTIVE' ? 'badge-pill pill-red' : 'badge-pill pill-blue');
+        }
+
+        const ind = ifci.indicators || {};
+        if (ind.gsec_10y_yield !== undefined && document.getElementById('ifciGsec')) {
+          document.getElementById('ifciGsec').textContent = ind.gsec_10y_yield.toFixed(2) + '%';
+        }
+        if (ind.repo_rate !== undefined && document.getElementById('ifciRepo')) {
+          document.getElementById('ifciRepo').textContent = ind.repo_rate.toFixed(2) + '%';
+        }
+        if (ind.banking_system_liquidity_cr !== undefined && document.getElementById('ifciLiquidity')) {
+          const l = ind.banking_system_liquidity_cr;
+          document.getElementById('ifciLiquidity').textContent = (l >= 0 ? '+₹' : '-₹') + Math.abs(l).toLocaleString('en-IN') + ' Cr';
+        }
+        if (ind.cpi_inflation !== undefined && document.getElementById('ifciCpi')) {
+          document.getElementById('ifciCpi').textContent = ind.cpi_inflation.toFixed(2) + '%';
+        }
+        if (ind.manufacturing_pmi !== undefined && document.getElementById('ifciPmi')) {
+          document.getElementById('ifciPmi').textContent = ind.manufacturing_pmi.toFixed(1);
+        }
+        if (ind.nifty_pe !== undefined && document.getElementById('ifciNiftyPe')) {
+          document.getElementById('ifciNiftyPe').textContent = ind.nifty_pe.toFixed(1) + 'x';
+        }
+        if (ifci.reasons && ifci.reasons.length > 0 && document.getElementById('ifciDriversText')) {
+          document.getElementById('ifciDriversText').textContent = 'Drivers: ' + ifci.reasons.join(' · ');
+        }
+        if (ifci.trading_date && document.getElementById('ifciUpdatedDate')) {
+          document.getElementById('ifciUpdatedDate').textContent = 'Daily Synchronized: ' + ifci.trading_date;
+        }
+      } catch (e) {
+        console.error('Error updating Indian Financial Conditions UI:', e);
+      }
+    }
+
     async function updateDashboard() {
       try {
         const res = await fetch('/api/status');
@@ -1469,6 +1644,9 @@
             dText.textContent = `📅 Daily Data: ${dailyData.active_market_date} (${dailyData.status === 'UP_TO_DATE' ? 'UPDATED' : 'SYNC DUE'})`;
           }
         } catch (e) {}
+
+        // Update Indian Financial Conditions Card
+        updateIndianFinancialConditionsUI();
 
         // Metrics
         if (data.portfolio) {
@@ -1834,6 +2012,29 @@
         yList.innerHTML = (data.yearly.reasons && data.yearly.reasons.length > 0)
           ? data.yearly.reasons.map(r => `<li>${r}</li>`).join('')
           : '<li>Resilient multi-year fundamentals</li>';
+
+        // Populate Indian Financial Conditions Overlay
+        if (data.indian_financial_condition) {
+          const ifc = data.indian_financial_condition;
+          const ifcBadge = document.getElementById('fmMIfciBadge');
+          if (ifcBadge) {
+            ifcBadge.textContent = `${ifc.regime} · ${ifc.score ? ifc.score.toFixed(1) : '68.5'}`;
+            ifcBadge.className = `badge-pill ${ifc.regime === 'EXPANSIONARY' ? 'pill-green' : (ifc.regime === 'RESTRICTIVE' ? 'pill-red' : 'badge-pill pill-blue')}`;
+          }
+          const ind = ifc.indicators || {};
+          if (document.getElementById('fmIfciGsec')) document.getElementById('fmIfciGsec').textContent = ind.gsec_10y_yield !== undefined ? ind.gsec_10y_yield.toFixed(2) + '%' : '6.92%';
+          if (document.getElementById('fmIfciRepo')) document.getElementById('fmIfciRepo').textContent = ind.repo_rate !== undefined ? ind.repo_rate.toFixed(2) + '%' : '6.50%';
+          if (document.getElementById('fmIfciLiquidity')) {
+            const l = ind.banking_system_liquidity_cr;
+            document.getElementById('fmIfciLiquidity').textContent = l !== undefined ? (l >= 0 ? '+₹' : '-₹') + Math.abs(l).toLocaleString('en-IN') + ' Cr' : '+₹45,000 Cr';
+          }
+          if (document.getElementById('fmIfciCpi')) document.getElementById('fmIfciCpi').textContent = ind.cpi_inflation !== undefined ? ind.cpi_inflation.toFixed(2) + '%' : '4.60%';
+          if (document.getElementById('fmIfciPmi')) document.getElementById('fmIfciPmi').textContent = ind.manufacturing_pmi !== undefined ? ind.manufacturing_pmi.toFixed(1) : '58.4';
+          if (document.getElementById('fmIfciNiftyPe')) document.getElementById('fmIfciNiftyPe').textContent = ind.nifty_pe !== undefined ? ind.nifty_pe.toFixed(1) + 'x' : '22.4x';
+          if (document.getElementById('fmIfciRationale')) {
+            document.getElementById('fmIfciRationale').textContent = (ifc.reasons && ifc.reasons.length > 0) ? ifc.reasons.join(' · ') : 'Surplus banking liquidity and solid macro metrics support equity valuations.';
+          }
+        }
 
         document.getElementById('btnModalRunCycle').textContent = `⚡ Run Autonomous Cycle on ${symbol}`;
         document.getElementById('fundModal').classList.remove('hidden');

@@ -283,22 +283,156 @@ class FundamentalAnalystAgent:
         return max(0.0, min(100.0, score)), reasons
 
     # ──────────────────────────────────────────────────────────────────────
-    #  MARKET REGIME SCORE  (used as macro context layer)
+    #  INDIAN STOCK MARKET FINANCIAL CONDITIONS SCORE (0 – 100)
+    #  Evaluates:
+    #   1. Sovereign Benchmark Yield: 10Y Indian G-Sec (<6.90% bullish, >7.20% restrictive)
+    #   2. Monetary Environment: RBI Repo Rate & Banking System Liquidity Surplus/Deficit
+    #   3. Economic Growth & Activity: Manufacturing PMI & GST revenue collections
+    #   4. Macro Stability: Retail CPI inflation & Forex reserves buffer
+    #   5. Equity Market Valuation: Nifty 50 trailing PE vs 5-year historical avg
+    #   6. Market Fear & Breadth: India VIX & Advance-Decline Ratio
+    #   7. Institutional Flow Liquidity: Net 5-day FII + DII cash market flows
     # ──────────────────────────────────────────────────────────────────────
-    def _score_market_regime(self, macro: MacroContext) -> float:
+    def _score_indian_financial_conditions(self, macro: MacroContext) -> Tuple[float, list, Dict[str, Any]]:
         score = 50.0
-        if macro.nifty50_1m_return > 3.0:  score += 12.0
-        elif macro.nifty50_1m_return < -3.0: score -= 12.0
-        if macro.nifty50_1w_return > 1.0:  score += 8.0
-        elif macro.nifty50_1w_return < -1.0: score -= 8.0
-        if macro.india_vix < 13.0: score += 8.0
-        elif macro.india_vix > 18.0: score -= 12.0
-        if macro.advance_decline_ratio > 1.4: score += 8.0
-        elif macro.advance_decline_ratio < 0.7: score -= 8.0
+        reasons = []
+
+        # 1. 10-Year Indian Sovereign Benchmark Bond Yield (G-Sec)
+        yield_10y = getattr(macro, "gsec_10y_yield", 6.92)
+        if yield_10y <= 6.90:
+            score += 8.0
+            reasons.append(f"Favorable 10Y G-Sec yield ({yield_10y:.2f}%) expands equity valuation multiples")
+        elif yield_10y <= 7.10:
+            score += 4.0
+            reasons.append(f"Stable 10Y G-Sec yield ({yield_10y:.2f}%) within benign RBI range")
+        elif yield_10y >= 7.25:
+            score -= 8.0
+            reasons.append(f"Elevated 10Y G-Sec yield ({yield_10y:.2f}%) exerts equity valuation pressure")
+
+        # 2. Banking System Liquidity (RBI Net LAF)
+        bank_liq = getattr(macro, "banking_system_liquidity_cr", 45000.0)
+        if bank_liq >= 35000.0:
+            score += 6.0
+            reasons.append(f"Surplus banking liquidity (+₹{bank_liq:,.0f}Cr) fosters easy financial conditions")
+        elif bank_liq >= 10000.0:
+            score += 3.0
+            reasons.append(f"Adequate banking liquidity (+₹{bank_liq:,.0f}Cr)")
+        elif bank_liq < 0.0:
+            score -= 6.0
+            reasons.append(f"Banking liquidity deficit (-₹{abs(bank_liq):,.0f}Cr) tightens short-term rates")
+
+        # 3. India Manufacturing PMI (Economic Growth Engine)
+        pmi = getattr(macro, "manufacturing_pmi", 58.4)
+        if pmi >= 56.5:
+            score += 8.0
+            reasons.append(f"Strong Manufacturing PMI ({pmi:.1f}) signals robust corporate revenue expansion")
+        elif pmi >= 52.0:
+            score += 4.0
+            reasons.append(f"Healthy Manufacturing PMI ({pmi:.1f}) in expansion zone")
+        elif pmi < 50.0:
+            score -= 10.0
+            reasons.append(f"Manufacturing PMI ({pmi:.1f}) in contraction territory")
+
+        # 4. Retail CPI Inflation & Price Stability
+        cpi = getattr(macro, "cpi_inflation", 4.60)
+        if cpi <= 4.5:
+            score += 6.0
+            reasons.append(f"Benign CPI inflation ({cpi:.1f}%) within RBI 4% midpoint tolerance")
+        elif cpi <= 5.2:
+            score += 2.0
+            reasons.append(f"Manageable CPI inflation ({cpi:.1f}%)")
+        elif cpi >= 6.0:
+            score -= 8.0
+            reasons.append(f"High CPI inflation ({cpi:.1f}%) risks restrictive monetary policy")
+
+        # 5. Broad Market Valuation (Nifty 50 PE vs 5-Year Average)
+        nifty_pe = getattr(macro, "nifty_pe", 22.4)
+        nifty_pe_avg = getattr(macro, "nifty_pe_5y_avg", 21.8)
+        if nifty_pe <= nifty_pe_avg:
+            score += 6.0
+            reasons.append(f"Nifty 50 PE ({nifty_pe:.1f}) offers valuation margin of safety vs 5Y avg ({nifty_pe_avg:.1f})")
+        elif nifty_pe <= 23.5:
+            score += 2.0
+            reasons.append(f"Fair market valuation (Nifty PE {nifty_pe:.1f})")
+        elif nifty_pe >= 25.0:
+            score -= 6.0
+            reasons.append(f"Rich broad market valuation (Nifty PE {nifty_pe:.1f} > 25.0)")
+
+        # 6. India VIX (Market Volatility & Equity Risk Premium)
+        if macro.india_vix < 13.5:
+            score += 8.0
+            reasons.append(f"Low India VIX ({macro.india_vix:.1f}) reflects steady institutional risk appetite")
+        elif macro.india_vix < 16.0:
+            score += 3.0
+            reasons.append(f"Normal India VIX ({macro.india_vix:.1f})")
+        elif macro.india_vix > 18.0:
+            score -= 12.0
+            reasons.append(f"Elevated India VIX ({macro.india_vix:.1f}) indicates high risk aversion")
+
+        # 7. Institutional Liquidity Flows (FII + DII 5-Day Net Cash)
         net_flow = macro.fii_net_flow_5d_cr + macro.dii_net_flow_5d_cr
-        if net_flow > 2000: score += 8.0
-        elif net_flow < -2000: score -= 8.0
-        return max(0.0, min(100.0, score))
+        if net_flow >= 3000.0:
+            score += 8.0
+            reasons.append(f"Heavy combined FII+DII net inflows (+₹{net_flow:,.0f}Cr)")
+        elif net_flow >= 1000.0:
+            score += 4.0
+            reasons.append(f"Positive institutional inflows (+₹{net_flow:,.0f}Cr)")
+        elif net_flow <= -2000.0:
+            score -= 8.0
+            reasons.append(f"Net institutional outflows (-₹{abs(net_flow):,.0f}Cr)")
+
+        # 8. Forex Reserves & External Sector Buffer
+        forex = getattr(macro, "forex_reserves_usd_bn", 692.0)
+        if forex >= 670.0:
+            score += 5.0
+            reasons.append(f"Robust Forex reserves (${forex:.0f}Bn) insulates Indian rupee against global shocks")
+
+        # 9. Market Breadth & Momentum
+        if macro.advance_decline_ratio >= 1.4:
+            score += 5.0
+        elif macro.advance_decline_ratio < 0.7:
+            score -= 6.0
+
+        if macro.nifty50_1m_return > 3.0:
+            score += 5.0
+        elif macro.nifty50_1m_return < -3.0:
+            score -= 6.0
+
+        final_score = max(0.0, min(100.0, score))
+
+        # Financial Condition Classification
+        if final_score >= 65.0:
+            status = "EXPANSIONARY"
+        elif final_score >= 45.0:
+            status = "BALANCED"
+        else:
+            status = "RESTRICTIVE"
+
+        metrics = {
+            "ifci_score": round(final_score, 1),
+            "ifci_status": status,
+            "gsec_10y_yield": yield_10y,
+            "repo_rate": getattr(macro, "repo_rate", 6.50),
+            "cpi_inflation": cpi,
+            "manufacturing_pmi": pmi,
+            "banking_liquidity_cr": bank_liq,
+            "banking_system_liquidity_cr": bank_liq,
+            "forex_reserves_usd_bn": forex,
+            "nifty_pe": nifty_pe,
+            "nifty_pe_5y_avg": nifty_pe_avg,
+            "gst_collection_cr": getattr(macro, "gst_collection_cr", 187000.0),
+            "india_vix": macro.india_vix,
+            "advance_decline_ratio": macro.advance_decline_ratio,
+            "fii_dii_net_flow_cr": net_flow,
+            "reasons": reasons
+        }
+
+        return final_score, reasons, metrics
+
+    def _score_market_regime(self, macro: MacroContext) -> float:
+        """Evaluate macro regime using Indian Financial Conditions Index."""
+        score, _, _ = self._score_indian_financial_conditions(macro)
+        return score
 
     # ──────────────────────────────────────────────────────────────────────
     #  MAIN ANALYZE  — called by orchestrator for each symbol
@@ -336,7 +470,7 @@ class FundamentalAnalystAgent:
         daily_score,   daily_reasons   = self._score_daily(symbol, macro)
         monthly_score, monthly_reasons = self._score_monthly(symbol)
         yearly_score,  yearly_reasons  = self._score_yearly(symbol, fundamentals)
-        regime_score = self._score_market_regime(macro)
+        regime_score,  ifci_reasons, ifci_metrics = self._score_indian_financial_conditions(macro)
 
         # Weighted composite
         composite = (
@@ -345,7 +479,7 @@ class FundamentalAnalystAgent:
             + self.YEARLY_WEIGHT  * yearly_score
         )
 
-        # Blend with macro regime (acts as a final overlay, ±10 points max)
+        # Blend with Indian financial conditions regime (acts as a final overlay, ±10 points max)
         regime_adj = (regime_score - 50.0) * 0.15
         final_score = max(0.0, min(100.0, composite + regime_adj))
 
@@ -364,6 +498,8 @@ class FundamentalAnalystAgent:
         rationale += [f"[DAILY]   {r}" for r in daily_reasons[:2]]
         rationale += [f"[MONTHLY] {r}" for r in monthly_reasons[:2]]
         rationale += [f"[YEARLY]  {r}" for r in yearly_reasons[:2]]
+        if ifci_reasons:
+            rationale.append(f"[INDIAN MACRO] IFCI {regime_score:.1f} ({ifci_metrics['ifci_status']}) — {ifci_reasons[0]}")
 
         confidence = min(1.0, max(0.0, abs(final_score - 50.0) / 50.0))
 
@@ -379,6 +515,19 @@ class FundamentalAnalystAgent:
                 "fund_score":           round(final_score, 2),
                 "regime_score":         round(regime_score, 2),
                 "regime_adjustment":    round(regime_adj, 2),
+                # Indian Stock Market Financial Condition Indicators
+                "ifci_score":           ifci_metrics["ifci_score"],
+                "ifci_status":          ifci_metrics["ifci_status"],
+                "gsec_10y_yield":       ifci_metrics["gsec_10y_yield"],
+                "repo_rate":            ifci_metrics["repo_rate"],
+                "cpi_inflation":        ifci_metrics["cpi_inflation"],
+                "manufacturing_pmi":    ifci_metrics["manufacturing_pmi"],
+                "banking_liquidity_cr": ifci_metrics["banking_liquidity_cr"],
+                "forex_reserves_usd_bn":ifci_metrics["forex_reserves_usd_bn"],
+                "nifty_pe":             ifci_metrics["nifty_pe"],
+                "nifty_pe_5y_avg":      ifci_metrics["nifty_pe_5y_avg"],
+                "gst_collection_cr":    ifci_metrics["gst_collection_cr"],
+                "indian_financial_condition": ifci_metrics,
                 # Per-timeframe scores
                 "daily_score":          round(daily_score, 2),
                 "monthly_score":        round(monthly_score, 2),
@@ -444,7 +593,7 @@ class FundamentalAnalystAgent:
         daily_score, daily_reasons = self._score_daily(symbol, m_ctx)
         monthly_score, monthly_reasons = self._score_monthly(symbol)
         yearly_score, yearly_reasons = self._score_yearly(symbol, f_ctx)
-        regime_score = self._score_market_regime(m_ctx)
+        regime_score, ifci_reasons, ifci_metrics = self._score_indian_financial_conditions(m_ctx)
         composite = (
             self.DAILY_WEIGHT * daily_score
             + self.MONTHLY_WEIGHT * monthly_score
@@ -486,7 +635,9 @@ class FundamentalAnalystAgent:
             "macro": {
                 "regime_score": round(regime_score, 1),
                 "regime_adjustment": round(regime_adj, 2),
-                "india_vix": m_ctx.india_vix
-            }
+                "india_vix": m_ctx.india_vix,
+                "ifci_status": ifci_metrics["ifci_status"]
+            },
+            "indian_financial_condition": ifci_metrics
         }
 
