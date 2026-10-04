@@ -164,7 +164,15 @@ class PaperBroker(BaseBrokerAdapter):
         return False
 
     def update_price_tick(self, symbol: str, current_price: float) -> Optional[TradeRecord]:
-        """Update market price for a symbol, evaluate stop/target triggers, and close if hit."""
+        """Update market price for a symbol, evaluate stop/target triggers, and close if hit.
+        
+        Implements:
+        - Target exit: price reaches target_price or +15% gain.
+        - Hard stop-loss: price hits stop_loss or -5% loss.
+        - Trailing stop activation: once unrealized gain >= 8%, trailing stop
+          activates 4% below the running peak price for LONGs (4% above for SHORTs).
+          This locks in profits and prevents profitable trades from turning into losses.
+        """
         if symbol not in self.positions:
             return None
 
@@ -182,21 +190,43 @@ class PaperBroker(BaseBrokerAdapter):
         exit_price = None
 
         # Calculate percentage return of position
-        pnl_pct = (current_price - pos.entry_price) / pos.entry_price if pos.side == OrderSide.BUY else (pos.entry_price - current_price) / pos.entry_price
+        pnl_pct = (current_price - pos.entry_price) / pos.entry_price if pos.side == OrderSide.BUY \
+                  else (pos.entry_price - current_price) / pos.entry_price
+
+        # Trailing Stop Activation Logic:
+        # Once trade has moved 8% in our favour, activate trailing stop 4% behind the
+        # running high-water mark. This converts stop into a profit-protector.
+        if pos.side == OrderSide.BUY:
+            if pnl_pct >= 0.08:
+                new_trailing = round(current_price * 0.96, 2)  # 4% trailing
+                if new_trailing > pos.trailing_stop:            # ratchet only upward
+                    pos.trailing_stop = new_trailing
+        else:  # SHORT
+            if pnl_pct >= 0.08:
+                new_trailing = round(current_price * 1.04, 2)  # 4% trailing above
+                if new_trailing < pos.trailing_stop:            # ratchet only downward
+                    pos.trailing_stop = new_trailing
 
         # Automatic Square-Off Triggers:
-        # Profit Target: 15% to 20% (or target_price reached)
-        # Stop Loss: -5.0% (or stop_loss reached)
+        # Profit Target: price reaches target_price or +15% gain.
+        # Trailing Stop: activated after 8% gain — exits if reversal >= 4%.
+        # Hard Stop Loss: -5.0% loss limit.
         if pos.side == OrderSide.BUY:
             if current_price >= pos.target_price or pnl_pct >= 0.15:
                 exit_reason = ExitReason.TARGET
                 exit_price = current_price
+            elif pos.trailing_stop > pos.stop_loss and current_price <= pos.trailing_stop:
+                exit_reason = ExitReason.TARGET   # Trailing stop hit while in profit = successful exit
+                exit_price = current_price
             elif current_price <= pos.stop_loss or pnl_pct <= -0.05:
                 exit_reason = ExitReason.STOP_LOSS
                 exit_price = current_price
-        else: # SHORT
+        else:  # SHORT
             if current_price <= pos.target_price or pnl_pct >= 0.15:
                 exit_reason = ExitReason.TARGET
+                exit_price = current_price
+            elif pos.trailing_stop < pos.stop_loss and current_price >= pos.trailing_stop:
+                exit_reason = ExitReason.TARGET   # Trailing stop hit while in profit = successful exit
                 exit_price = current_price
             elif current_price >= pos.stop_loss or pnl_pct <= -0.05:
                 exit_reason = ExitReason.STOP_LOSS

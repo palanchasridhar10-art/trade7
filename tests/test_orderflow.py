@@ -88,12 +88,12 @@ def test_agent2_integrates_orderflow_into_features_and_score(tech_agent):
         ema20=2880.0,
         ema50=2840.0,
         ema200=2720.0,
-        adx=30.0,
-        rsi14=62.0,
+        adx=34.0,          # Updated: meets new ADX ≥32 requirement
+        rsi14=63.0,         # Updated: within new 57-75 long zone
         macd_hist=3.5,
         atr14=28.0,
         vwap=2905.0,
-        volume_ratio=1.4,
+        volume_ratio=1.60,  # Updated: meets new 1.40x volume requirement
         orderflow=orderflow_input,
         portfolio_capital=1_000_000.0
     )

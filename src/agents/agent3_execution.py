@@ -25,9 +25,9 @@ class ExecutionAgent:
         self.risk_engine = risk_engine
         cfg = config or {}
         consensus_cfg = cfg.get("consensus", {})
-        self.min_fund_conf = consensus_cfg.get("min_fund_confidence", 0.30)   # Lowered: tech gate is primary
-        self.min_tech_conf = consensus_cfg.get("min_tech_confidence", 0.60)
-        self.min_combined_conviction = consensus_cfg.get("min_combined_conviction", 0.60)  # Slightly relaxed
+        self.min_fund_conf = consensus_cfg.get("min_fund_confidence", 0.35)   # Raised from 0.30: fundamental must show some conviction
+        self.min_tech_conf = consensus_cfg.get("min_tech_confidence", 0.75)   # Raised from 0.60 → 0.75: high technical confidence
+        self.min_combined_conviction = consensus_cfg.get("min_combined_conviction", 0.70)  # Raised from 0.60 → 0.70
         self.w_fund = consensus_cfg.get("fund_weight", 0.40)
         self.w_tech = consensus_cfg.get("tech_weight", 0.60)
 
@@ -114,8 +114,8 @@ class ExecutionAgent:
                 reason=f"Combined conviction ({combined_conviction:.2f}) below requirement {self.min_combined_conviction}."
             )
 
-        # Check 4: Positive Expectancy (Calibrated Win Prob >= 0.55 & Payoff Ratio >= 1.5)
-        if tech_signal.win_prob < 0.55 or tech_signal.payoff_ratio < 1.50:
+        # Check 4: Positive Expectancy — require high win prob AND at least 2:1 payoff ratio
+        if tech_signal.win_prob < 0.70 or tech_signal.payoff_ratio < 2.00:
             return ConsensusResult(
                 symbol=symbol,
                 timestamp=now,
@@ -126,7 +126,7 @@ class ExecutionAgent:
                 tech_confidence=tech_signal.confidence,
                 calibrated_win_prob=tech_signal.win_prob,
                 payoff_ratio=tech_signal.payoff_ratio,
-                reason=f"Positive expectancy check failed (p={tech_signal.win_prob:.2f} < 0.55 or b={tech_signal.payoff_ratio:.2f} < 1.50)."
+                reason=f"Positive expectancy check failed (p={tech_signal.win_prob:.2f} < 0.70 or R:R={tech_signal.payoff_ratio:.2f} < 2.00) — unfavorable risk/reward."
             )
 
         return ConsensusResult(

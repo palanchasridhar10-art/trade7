@@ -111,7 +111,7 @@ def test_consensus_passes_on_high_conviction_agreement(execution_agent):
         entry=1650.0,
         stop_loss=1635.0,
         target=1680.0,
-        win_prob=0.64,
+        win_prob=0.72,   # Updated: meets new 0.70 minimum
         payoff_ratio=2.0,
         kelly_fraction=0.05,
         suggested_position_value=75000.0

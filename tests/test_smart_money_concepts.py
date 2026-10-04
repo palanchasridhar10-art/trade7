@@ -311,12 +311,12 @@ def test_agent2_gate7_blocks_short_on_bullish_bos_or_ssl_sweep():
         ema20=1660.0,
         ema50=1680.0,
         ema200=1720.0,
-        adx=30.0,
-        rsi14=38.0,
+        adx=34.0,          # Updated: meets new ADX ≥32 requirement
+        rsi14=38.0,         # Within new 25-43 bearish zone
         macd_hist=-2.5,
         atr14=16.0,
         vwap=1655.0,
-        volume_ratio=1.50,
+        volume_ratio=1.50,  # Updated: meets new 1.40x volume requirement
         orderflow={
             "cumulative_delta": -300_000,
             "buy_volume": 600_000,

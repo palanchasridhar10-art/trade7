@@ -33,8 +33,9 @@ class FundamentalAnalystAgent:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         cfg = config or {}
-        self.long_threshold  = cfg.get("long_threshold",  62.0)
-        self.short_threshold = cfg.get("short_threshold", 38.0)
+        # Raised thresholds to align with 95%+ win-rate system target
+        self.long_threshold  = cfg.get("long_threshold",  65.0)  # Raised from 62 → 65
+        self.short_threshold = cfg.get("short_threshold", 35.0)  # Lowered from 38 → 35
         self.daily_data: Dict[str, Dict[str, Any]] = dict(DAILY_DATA)
         self.last_daily_update: Optional[datetime] = None
         self.trading_date: Optional[str] = None

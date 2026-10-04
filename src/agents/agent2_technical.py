@@ -60,24 +60,24 @@ class TechnicalAnalystAgent:
         self.w_pre_market = weights.get("pre_market", 0.15)
 
         thresholds = cfg.get("thresholds", {})
-        # Strict thresholds for high win-rate: score must be >0.70 to trigger trade
-        self.long_threshold  = thresholds.get("long_score",  0.70)
-        self.short_threshold = thresholds.get("short_score", -0.70)
+        # Strict thresholds for high win-rate: score must be >0.75 to trigger trade
+        self.long_threshold  = thresholds.get("long_score",  0.75)
+        self.short_threshold = thresholds.get("short_score", -0.75)
 
         kelly_cfg = cfg.get("kelly", {})
         self.kelly_multiplier = kelly_cfg.get("multiplier",        0.25)   # Quarter Kelly
         self.max_risk_cap     = kelly_cfg.get("max_risk_cap",      0.015)  # 1.5% max capital risk
-        self.min_payoff       = kelly_cfg.get("min_payoff_ratio",  1.50)
-        self.min_prob         = kelly_cfg.get("min_calibrated_prob",0.55)
+        self.min_payoff       = kelly_cfg.get("min_payoff_ratio",  2.00)   # Raised: require at least 2:1 R:R
+        self.min_prob         = kelly_cfg.get("min_calibrated_prob",0.65)  # Raised: 65% min win probability
 
-        # High Win-Rate Gate parameters
-        self.min_adx_for_trade    = 28.0   # Only trade strong trending markets
-        self.rsi_long_min         = 55.0   # RSI must be in bullish momentum zone for LONG
-        self.rsi_long_max         = 78.0   # Avoid overbought (RSI > 78)
-        self.rsi_short_min        = 22.0   # Avoid oversold for SHORT
-        self.rsi_short_max        = 45.0   # RSI must be bearish zone for SHORT
-        self.min_volume_ratio     = 1.25   # Volume must be 25%+ above average
-        self.min_indicator_votes  = 4      # Need 4 of 7 indicators to agree
+        # High Win-Rate Gate parameters — all raised for 95%+ win-rate targeting
+        self.min_adx_for_trade    = 32.0   # Raised from 28 → 32: only strong directional markets
+        self.rsi_long_min         = 57.0   # Raised from 55 → 57: confirmed bullish momentum zone
+        self.rsi_long_max         = 75.0   # Lowered from 78 → 75: avoid extended overbought
+        self.rsi_short_min        = 25.0   # Raised from 22 → 25: avoid extreme oversold shorts
+        self.rsi_short_max        = 43.0   # Lowered from 45 → 43: confirmed bearish momentum zone
+        self.min_volume_ratio     = 1.40   # Raised from 1.25 → 1.40: strong institutional participation
+        self.min_indicator_votes  = 5      # Raised from 4 → 5 of 7: require stronger multi-pillar confluence
 
         # Daily technical data store
         self.daily_profiles: Dict[str, Dict[str, Any]] = {}
@@ -167,23 +167,24 @@ class TechnicalAnalystAgent:
 
     def calibrate_probability(self, raw_confidence: float, votes_aligned: int) -> float:
         """Map raw technical confidence + vote count into calibrated empirical win probability.
-        
-        With 4/7 votes aligned: probability floor is raised to 0.68.
-        With 5/7 votes aligned: probability floor is raised to 0.75.
-        With 6/7 votes aligned: probability floor is raised to 0.85 (Institutional Ultra-High Conviction).
-        With 7/7 votes aligned: probability floor is raised to 0.90 (Maximum Institutional Confluence).
-        This reflects the historically observed higher win rate of strong-confluence setups.
+
+        Conservative floor calibration for 95%+ win-rate targeting:
+          5/7 votes aligned: floor 0.78 (high confluence).
+          6/7 votes aligned: floor 0.88 (ultra-high institutional conviction).
+          7/7 votes aligned: floor 0.95 (maximum institutional confluence).
+        Below 5 aligned votes: trade is blocked by gate earlier; this should
+        only be called when gate_passed=True (≥5 votes).
         """
-        base_p = 0.50 + (raw_confidence * 0.25)
+        base_p = 0.50 + (raw_confidence * 0.30)  # steeper ramp with confidence
         if votes_aligned >= 7:
-            base_p = max(base_p, 0.90)  # All 7 aligned → maximum probability
+            base_p = max(base_p, 0.95)  # All 7 aligned → near-certain institutional setup
         elif votes_aligned >= 6:
-            base_p = max(base_p, 0.85)  # 6 aligned → ultra high probability
+            base_p = max(base_p, 0.88)  # 6 aligned → ultra high probability
         elif votes_aligned >= 5:
-            base_p = max(base_p, 0.75)  # 5 aligned → high probability
+            base_p = max(base_p, 0.78)  # 5 aligned → high probability
         elif votes_aligned >= 4:
-            base_p = max(base_p, 0.68)  # 4 aligned → high probability
-        return min(0.95, max(0.40, base_p))
+            base_p = max(base_p, 0.70)  # 4 aligned (fallback safety)
+        return min(0.97, max(0.50, base_p))
 
     def compute_fractional_kelly(
         self,
@@ -242,74 +243,80 @@ class TechnicalAnalystAgent:
         pre_market_imbalance: float = 0.0
     ) -> tuple[bool, str]:
         """
-        Strict multi-layer gate for 90%+ win rate. All conditions must pass.
+        Strict multi-layer gate for 95%+ win rate. All conditions must pass.
         Returns (passed: bool, reason: str).
         """
-        # Gate 1: Strong trend (not choppy)
+        # Gate 1: Strong directional trend — raised ADX threshold to filter choppy markets
         if adx < self.min_adx_for_trade:
-            return False, f"ADX {adx:.1f} < {self.min_adx_for_trade} — weak trend, skipping to avoid whipsaws."
+            return False, f"ADX {adx:.1f} < {self.min_adx_for_trade} — market too weak/choppy for high win-rate entry."
 
-        # Gate 2: Minimum indicator alignment
+        # Gate 2: Minimum indicator alignment — at least 5 of 7 pillars must agree
         if votes_aligned < self.min_indicator_votes:
-            return False, f"Only {votes_aligned}/{self.min_indicator_votes} indicators aligned — insufficient confluence."
+            return False, f"Only {votes_aligned}/{self.min_indicator_votes} pillars aligned — insufficient multi-timeframe confluence."
 
-        # Gate 3: Direction-specific RSI zone
+        # Gate 3: Direction-specific RSI zone — tightened for confirmed momentum
         if direction == SignalDirection.LONG:
             if not (self.rsi_long_min <= rsi14 <= self.rsi_long_max):
-                return False, f"RSI {rsi14:.1f} not in bullish momentum zone [{self.rsi_long_min}-{self.rsi_long_max}]."
+                return False, f"RSI {rsi14:.1f} not in confirmed bullish zone [{self.rsi_long_min}-{self.rsi_long_max}] — momentum not confirmed."
         elif direction == SignalDirection.SHORT:
             if not (self.rsi_short_min <= rsi14 <= self.rsi_short_max):
-                return False, f"RSI {rsi14:.1f} not in bearish momentum zone [{self.rsi_short_min}-{self.rsi_short_max}]."
+                return False, f"RSI {rsi14:.1f} not in confirmed bearish zone [{self.rsi_short_min}-{self.rsi_short_max}] — momentum not confirmed."
 
-        # Gate 4: Volume confirmation
+        # Gate 4: Volume confirmation — raised to 1.40x for strong institutional participation
         if volume_ratio < self.min_volume_ratio:
-            return False, f"Volume {volume_ratio:.2f}x below required {self.min_volume_ratio}x — no institutional participation."
+            return False, f"Volume {volume_ratio:.2f}x below required {self.min_volume_ratio}x — insufficient institutional participation."
 
-        # Gate 5: VWAP confirmation (price must be on the correct side of VWAP)
+        # Gate 5: VWAP confirmation (price must be clearly on the correct side of VWAP)
         if direction == SignalDirection.LONG and current_price < vwap:
-            return False, f"Price ₹{current_price:.2f} below VWAP ₹{vwap:.2f} — bearish intraday context for LONG."
+            return False, f"Price ₹{current_price:.2f} below VWAP ₹{vwap:.2f} — bearish intraday bias for LONG."
         if direction == SignalDirection.SHORT and current_price > vwap:
-            return False, f"Price ₹{current_price:.2f} above VWAP ₹{vwap:.2f} — bullish intraday context for SHORT."
+            return False, f"Price ₹{current_price:.2f} above VWAP ₹{vwap:.2f} — bullish intraday bias for SHORT."
 
-        # Gate 6: Order Flow must confirm direction
+        # Gate 6: Order Flow must strongly confirm direction
         if direction == SignalDirection.LONG and orderflow_vote < 0.5:
-            return False, f"Order Flow not confirming LONG (vote={orderflow_vote:.2f}, score={of_score:.2f})."
+            return False, f"Order Flow not confirming LONG (vote={orderflow_vote:.2f}, score={of_score:.2f}) — no institutional buying tape."
         if direction == SignalDirection.SHORT and orderflow_vote > -0.5:
-            return False, f"Order Flow not confirming SHORT (vote={orderflow_vote:.2f}, score={of_score:.2f})."
+            return False, f"Order Flow not confirming SHORT (vote={orderflow_vote:.2f}, score={of_score:.2f}) — no institutional selling tape."
 
-        # Gate 7: Smart Money Concepts (SMC) Confirmation
+        # Gate 7: Smart Money Concepts (SMC) — tightened for higher conviction
         if direction == SignalDirection.LONG:
             if smc_structure == MarketStructureType.BEARISH_BOS.value:
-                return False, f"SMC Gate: Market Structure is {smc_structure} — institutional trend is breaking lower lows."
+                return False, f"SMC Gate: Market Structure is {smc_structure} — institutional trend breaking lower lows."
             if smc_liq_event == LiquidityEventType.BSL_SWEPT.value:
                 return False, "SMC Gate: Buy-Side Liquidity (BSL) swept and rejected — retail distribution trap active."
-            if smc_range_pct > 78.0:
-                return False, f"SMC Gate: Price in extreme Premium ({smc_range_pct:.1f}%) — unfavorable institutional buying zone."
-            if smc_vote < -0.30:
-                return False, f"SMC Gate: Smart Money Concept bias is Bearish (vote={smc_vote:.2f}) contradicting LONG."
+            if smc_range_pct > 75.0:  # Tightened from 78 → 75 to avoid extreme premium zones
+                return False, f"SMC Gate: Price in Premium zone ({smc_range_pct:.1f}%) — unfavorable institutional buying zone."
+            if smc_vote < 0.0:  # Tightened from -0.30 → 0.0: SMC must be at least neutral to bullish
+                return False, f"SMC Gate: Smart Money bias is Bearish/Neutral (vote={smc_vote:.2f}) contradicting LONG."
         elif direction == SignalDirection.SHORT:
             if smc_structure == MarketStructureType.BULLISH_BOS.value:
-                return False, f"SMC Gate: Market Structure is {smc_structure} — institutional trend is breaking higher highs."
+                return False, f"SMC Gate: Market Structure is {smc_structure} — institutional trend breaking higher highs."
             if smc_liq_event == LiquidityEventType.SSL_SWEPT.value:
                 return False, "SMC Gate: Sell-Side Liquidity (SSL) swept and reclaimed — retail accumulation trap active."
-            if smc_range_pct < 22.0:
-                return False, f"SMC Gate: Price in extreme Discount ({smc_range_pct:.1f}%) — unfavorable institutional selling zone."
-            if smc_vote > 0.30:
-                return False, f"SMC Gate: Smart Money Concept bias is Bullish (vote={smc_vote:.2f}) contradicting SHORT."
+            if smc_range_pct < 25.0:  # Tightened from 22 → 25 to avoid extreme discount zones
+                return False, f"SMC Gate: Price in Discount zone ({smc_range_pct:.1f}%) — unfavorable institutional selling zone."
+            if smc_vote > 0.0:  # Tightened from 0.30 → 0.0: SMC must be at least neutral to bearish
+                return False, f"SMC Gate: Smart Money bias is Bullish/Neutral (vote={smc_vote:.2f}) contradicting SHORT."
 
-        # Gate 8: Pre-Market Session Confirmation Gate (09:00 - 09:15 IST)
+        # Gate 8: Pre-Market Session Confirmation Gate (09:00 - 09:15 IST) — expanded conditions
         if direction == SignalDirection.LONG:
-            if pre_market_regime == PreMarketRegime.BEARISH_BREAKDOWN.value:
-                return False, f"Pre-Market Gate: Regime is {pre_market_regime} (gap={pre_market_gap_pct:+.2f}%, imbalance={pre_market_imbalance:+.2f}) — aggressive institutional pre-market dump."
-            if pre_market_vote < -0.30:
-                return False, f"Pre-Market Gate: Bearish pre-market session (vote={pre_market_vote:.2f}) contradicting LONG trade."
+            if pre_market_regime in (
+                PreMarketRegime.BEARISH_BREAKDOWN.value,
+                PreMarketRegime.GAP_UP_PROFIT_TAKING.value,  # Extended: profit-taking gap also blocks LONG
+            ):
+                return False, f"Pre-Market Gate: Regime {pre_market_regime} (gap={pre_market_gap_pct:+.2f}%, imb={pre_market_imbalance:+.2f}) — unfavorable opening conditions for LONG."
+            if pre_market_vote < 0.0:  # Tightened from -0.30 → 0.0: require at least neutral pre-market
+                return False, f"Pre-Market Gate: Bearish pre-market session (vote={pre_market_vote:.2f}) — contra-LONG signal."
         elif direction == SignalDirection.SHORT:
-            if pre_market_regime == PreMarketRegime.BULLISH_RUNAWAY.value:
-                return False, f"Pre-Market Gate: Regime is {pre_market_regime} (gap={pre_market_gap_pct:+.2f}%, imbalance={pre_market_imbalance:+.2f}) — runaway pre-market gap up."
-            if pre_market_vote > 0.30:
-                return False, f"Pre-Market Gate: Bullish pre-market session (vote={pre_market_vote:.2f}) contradicting SHORT trade."
+            if pre_market_regime in (
+                PreMarketRegime.BULLISH_RUNAWAY.value,
+                PreMarketRegime.GAP_DOWN_ACCUMULATION.value,  # Extended: smart money absorption blocks SHORT
+            ):
+                return False, f"Pre-Market Gate: Regime {pre_market_regime} (gap={pre_market_gap_pct:+.2f}%, imb={pre_market_imbalance:+.2f}) — unfavorable opening conditions for SHORT."
+            if pre_market_vote > 0.0:  # Tightened from 0.30 → 0.0: require at least neutral pre-market
+                return False, f"Pre-Market Gate: Bullish pre-market session (vote={pre_market_vote:.2f}) — contra-SHORT signal."
 
-        return True, "HIGH WIN-RATE gate passed — all 8 confirmation layers satisfied (including SMC and Pre-Market)."
+        return True, "HIGH WIN-RATE gate passed — all 8 confirmation layers satisfied with tightened filters (95%+ win-rate targeting)."
 
     def analyze(
         self,
