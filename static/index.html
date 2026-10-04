@@ -711,6 +711,128 @@
     </div>
   </div>
 
+  <!-- Pre-Market Session (09:00 - 09:15 IST) Intelligence Modal -->
+  <div id="preMarketModal" class="modal-overlay hidden" style="z-index: 120;">
+    <div class="login-card" style="max-width: 980px; width: 95%; max-height: 90vh; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 16px;">
+        <div>
+          <div class="angel-badge" style="background: rgba(0, 240, 255, 0.12); border-color: rgba(0, 240, 255, 0.3); color: var(--accent-cyan);">
+            🌅 Agent 2 Pre-Market Session Analysis (09:00 - 09:15 IST)
+          </div>
+          <h2 id="pmSymbolTitle" style="font-size: 22px; color: #fff; margin-top: 4px;">RELIANCE Pre-Market Session</h2>
+          <p id="pmSectorSubtitle" style="font-size: 13px; color: var(--text-muted);">
+            NSE / BSE Pre-Open Call Auction · Indicative Equilibrium Price (IEP) · Order Book Depth & Imbalance · Volume Surge · Macro Alignment
+          </p>
+        </div>
+        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="closePreMarketModal()">✕ Close</button>
+      </div>
+
+      <!-- Composite Summary Banner -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="display:flex; align-items:center; gap: 16px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Pre-Market Score</div>
+            <div id="pmCompositeScore" style="font-size: 26px; font-weight: 800; font-family: var(--font-mono); color: var(--accent-cyan);">+0.85 / 1.0</div>
+          </div>
+          <div id="pmRegimeBadge" class="badge-pill pill-green" style="font-size: 12px; padding: 6px 14px;">BULLISH_RUNAWAY</div>
+        </div>
+        <div style="display: flex; gap: 18px; font-size: 12px; font-family: var(--font-mono);">
+          <div><span style="color:var(--text-muted);">🎯 IEP Discovery:</span> <strong id="pmHeaderIep" style="color:var(--accent-green);">₹2,985.00 (+1.15%)</strong></div>
+          <div><span style="color:var(--text-muted);">⚖️ Imbalance:</span> <strong id="pmHeaderImbalance" style="color:var(--accent-cyan);">+0.38 (Buyers Lead)</strong></div>
+          <div><span style="color:var(--text-muted);">🚀 Volume Surge:</span> <strong id="pmHeaderVolSurge" style="color:var(--accent-yellow);">1.65x Avg</strong></div>
+          <div><span style="color:var(--text-muted);">🌐 GIFT Nifty:</span> <strong id="pmHeaderMacro" style="color:var(--accent-green);">Aligned (+0.42%)</strong></div>
+        </div>
+      </div>
+
+      <!-- Institutional Sentiment Box -->
+      <div style="background: rgba(0,240,255,0.06); border: 1px solid rgba(0,240,255,0.25); border-radius: var(--radius-md); padding: 12px 18px; margin-bottom: 18px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 4px;">Institutional Pre-Open Sentiment:</div>
+        <div id="pmSentimentText" style="font-size: 13px; color: var(--text-main); line-height: 1.5;">
+          Strong institutional conviction during 09:00 - 09:08 order accumulation: Indicative auction matched above previous close with persistent buy queue depth.
+        </div>
+      </div>
+
+      <!-- 4 Pillars of Pre-Market Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 18px;">
+        <!-- 1. Equilibrium Price & Gap -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+              <span>🎯 1. IEP & GAP DYNAMICS</span>
+            </div>
+            <span id="pmGapBadge" class="badge-pill pill-green">MODERATE_GAP_UP</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Auction price discovery vs yesterday's close:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Indicative Equilibrium Price</span><span class="agent-stat-value" id="pmIepPrice" style="color:var(--accent-cyan); font-weight:700;">₹2,985.00</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Previous Day Close</span><span class="agent-stat-value" id="pmPrevClose">₹2,951.05</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Gap Percentage</span><span class="agent-stat-value" id="pmGapPct" style="color:var(--accent-green); font-weight:700;">+1.15%</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Indicative Volatility Spread</span><span class="agent-stat-value" id="pmSpread">0.70% (Auction Range)</span></div>
+        </div>
+
+        <!-- 2. Order Book Depth & Imbalance -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-blue); display: flex; align-items: center; gap: 6px;">
+              <span>⚖️ 2. PRE-OPEN BOOK DEPTH</span>
+            </div>
+            <span id="pmImbalanceBadge" class="badge-pill pill-blue">+0.38 BUY LEAD</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Unexecuted institutional limit orders at IEP:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Total Buy Depth Qty</span><span class="agent-stat-value" id="pmBuyQty" style="color:var(--accent-green); font-weight:700;">115,000 Shs</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Total Sell Depth Qty</span><span class="agent-stat-value" id="pmSellQty" style="color:var(--accent-red); font-weight:700;">52,000 Shs</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Order Imbalance Ratio</span><span class="agent-stat-value" id="pmImbalanceRatio" style="color:var(--accent-cyan); font-weight:700;">+0.377</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Total Auction Depth</span><span class="agent-stat-value" id="pmTotalDepth">167,000 Shs</span></div>
+        </div>
+
+        <!-- 3. Pre-Market Volume Surge -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-yellow); display: flex; align-items: center; gap: 6px;">
+              <span>🚀 3. PRE-OPEN VOLUME SURGE</span>
+            </div>
+            <span id="pmVolSurgeBadge" class="badge-pill pill-yellow">1.65x SURGE</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Participation intensity at equilibrium match:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">IEP Matched Volume</span><span class="agent-stat-value" id="pmIepVol" style="color:var(--accent-yellow); font-weight:700;">41,250 Shs</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">20D Avg Pre-Market Volume</span><span class="agent-stat-value" id="pmAvgVol">25,000 Shs</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Volume Surge Ratio</span><span class="agent-stat-value" id="pmSurgeRatio" style="color:var(--accent-green); font-weight:700;">1.65x</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Auction Liquidity Grade</span><span class="agent-stat-value" id="pmLiquidityGrade" style="color:var(--accent-green);">HIGH (Institutional)</span></div>
+        </div>
+
+        <!-- 4. Macro Cues & Gate 8 Validation -->
+        <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-purple); display: flex; align-items: center; gap: 6px;">
+              <span>🌐 4. MACRO CUES & GATE 8</span>
+            </div>
+            <span id="pmGate8Badge" class="badge-pill pill-green">GATE 8 PASSED</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">Morning index cue correlation and safety check:</div>
+          <div class="agent-stat-row"><span class="agent-stat-label">GIFT Nifty Early Bias</span><span class="agent-stat-value" id="pmGiftNifty" style="color:var(--accent-green); font-weight:700;">+0.42% (Bullish Cue)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Macro Alignment Score</span><span class="agent-stat-value" id="pmMacroAlign">+1.00 (Fully Aligned)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Directional Pillar Vote</span><span class="agent-stat-value" id="pmVote" style="color:var(--accent-green); font-weight:700;">+1.00 (LONG)</span></div>
+          <div class="agent-stat-row"><span class="agent-stat-label">Gate 8 Status</span><span class="agent-stat-value" id="pmGateStatus" style="color:var(--accent-green); font-weight:700;">CONFIRMED (No Trap)</span></div>
+        </div>
+      </div>
+
+      <!-- Rationale Bullet List -->
+      <div style="background: rgba(14, 20, 34, 0.95); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Detailed Pre-Market Rationale:</div>
+        <ul id="pmRationaleList" style="margin-left: 20px; font-size: 12px; color: var(--text-main); line-height: 1.6;"></ul>
+      </div>
+
+      <!-- Quick Action Inside Modal -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">
+          Integrated into Agent 2 Technical Pillar 8 & Gate 8 Pre-Market Confirmation
+        </span>
+        <button class="btn btn-primary" id="btnPmModalRunCycle" onclick="triggerCycleForPmSymbol()">
+          ⚡ Run Autonomous Cycle on This Stock
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Daily Data Management & Rollover Modal -->
   <div id="dailyDataModal" class="modal-backdrop hidden" onclick="if(event.target===this) closeDailyDataModal()">
     <div class="modal" style="max-width: 820px; width: 95%; max-height: 90vh; overflow-y: auto;">
@@ -1041,13 +1163,13 @@
         <div class="agent-header">
           <div class="agent-title">
             <span>Agent 2</span>
-            <span class="agent-tag">Technical + Order Flow + SMC</span>
+            <span class="agent-tag">Technical + Order Flow + SMC + Pre-Market</span>
           </div>
           <span id="agent2Badge" class="badge-pill pill-green">CONFLUENCE</span>
         </div>
         <div class="agent-stat-row">
           <span class="agent-stat-label">Confluence Score</span>
-          <span class="agent-stat-value" id="statTechScore">+0.98 / 1.0 (6 Pillars)</span>
+          <span class="agent-stat-value" id="statTechScore">+0.98 / 1.0 (7 Pillars)</span>
         </div>
         <div class="agent-stat-row">
           <span class="agent-stat-label">Company Order Flow</span>
@@ -1058,7 +1180,7 @@
           <span class="agent-stat-value" id="statCvd" style="color: var(--accent-green); font-weight: 700;">+400,000 Shs (Buyers Lead)</span>
         </div>
         <!-- Smart Money Concepts Row -->
-        <div class="agent-stat-row" style="background: rgba(16,185,129,0.06); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-green);">
+        <div class="agent-stat-row" style="background: rgba(16,185,129,0.06); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-green); margin-bottom: 4px;">
           <div>
             <div style="font-weight: 600; color: #fff; font-size: 12px; display: flex; align-items: center; gap: 6px;">
               <span>🏛️ Smart Money (SMC)</span>
@@ -1068,10 +1190,23 @@
           </div>
           <span class="agent-stat-value" id="statSmcScore" style="color: var(--accent-green); font-size: 14px; font-weight: 700;">+0.95</span>
         </div>
+        <!-- Pre-Market Session Row (09:00 - 09:15 IST) -->
+        <div class="agent-stat-row" style="background: rgba(0,240,255,0.06); padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--accent-cyan); margin-bottom: 4px;">
+          <div>
+            <div style="font-weight: 600; color: #fff; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🌅 Pre-Market (09:00-09:15)</span>
+              <span id="statPmBadge" class="badge-pill pill-green" style="font-size: 9px; padding: 1px 5px;">BULLISH_RUNAWAY</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;" id="statPmDrivers">IEP ₹2,985.00 (+1.15%) · 1.65x Vol Surge · +0.38 Imbalance · Macro Aligned</div>
+          </div>
+          <span class="agent-stat-value" id="statPmScore" style="color: var(--accent-cyan); font-size: 14px; font-weight: 700;">+0.85</span>
+        </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:4px;">
-          <span class="agent-stat-value" style="font-size:11px; color: var(--text-dim);">90% Cap · -5% SL · +18% Tgt</span>
           <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="openSmcModalCurrent()">
             🏛️ SMC Intel
+          </button>
+          <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px; border-color: rgba(0,240,255,0.4); color: var(--accent-cyan);" onclick="openPreMarketModalCurrent()">
+            🌅 Pre-Mkt Intel
           </button>
         </div>
       </div>
@@ -1253,11 +1388,12 @@
             <th>Win Prob</th>
             <th>Action</th>
             <th>🏛️ Smart Money (SMC)</th>
+            <th>🌅 Pre-Market (09:00-09:15)</th>
             <th>Actions / Intel</th>
           </tr>
         </thead>
         <tbody id="universeTableBody">
-          <tr><td colspan="14" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
+          <tr><td colspan="15" style="text-align:center; color:var(--text-dim); padding:20px;">Waiting for first full scan of all 50 companies...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1887,6 +2023,14 @@
         const smcPillClass = isSmcBull ? 'pill-green' : (isSmcBear ? 'pill-red' : 'pill-gray');
         const smcBadgeText = `${smcStruct.replace('BULLISH_', '').replace('BEARISH_', '').replace('_CONSOLIDATION', '')} · ${smcLiq.replace('_SWEPT', ' SWP')}`;
 
+        const pm = c.pre_market || {};
+        const pmRegime = pm.pre_market_regime || 'BALANCED_OPEN';
+        const pmGap = typeof pm.gap_pct === 'number' ? pm.gap_pct : (typeof pm.pre_market_gap_pct === 'number' ? pm.pre_market_gap_pct : 0.0);
+        const isPmBull = pmRegime === 'BULLISH_RUNAWAY' || pmGap > 0.5;
+        const isPmBear = pmRegime === 'BEARISH_BREAKDOWN' || pmGap < -0.5;
+        const pmPillClass = isPmBull ? 'pill-green' : (isPmBear ? 'pill-red' : 'pill-gray');
+        const pmBadgeText = `${pmGap >= 0 ? '+' : ''}${pmGap.toFixed(2)}% · ${pmRegime.replace('BULLISH_', '').replace('BEARISH_', '').replace('_OPEN', '')}`;
+
         return `<tr style="${rowBg}">
           <td><strong style="color:${isTop ? '#F59E0B' : (isTraded ? 'var(--accent-green)' : 'var(--text-main)')}">${isTop ? '★ ' : ''}${c.symbol}</strong></td>
           <td style="font-size:11px; color:var(--text-muted);">${c.sector}</td>
@@ -1901,6 +2045,7 @@
           <td style="color:${winColor}; font-weight:700; font-family:var(--font-mono);">${winPct}</td>
           <td>${actPillHtml}</td>
           <td><span class="badge-pill ${smcPillClass}" style="font-size:10px;">${smcBadgeText}</span></td>
+          <td><span class="badge-pill ${pmPillClass}" style="font-size:10px;">${pmBadgeText}</span></td>
           <td>
             <div style="display:flex; gap:4px;">
               <button class="btn btn-secondary" style="padding: 3px 7px; font-size: 10px;" onclick="openFundModal('${c.symbol}')" title="Fundamental Intel">
@@ -1908,6 +2053,9 @@
               </button>
               <button class="btn btn-secondary" style="padding: 3px 7px; font-size: 10px; border-color: rgba(16,185,129,0.4); color: var(--accent-green);" onclick="openSmcModal('${c.symbol}')" title="Smart Money Concepts Intel">
                 🏛️ SMC
+              </button>
+              <button class="btn btn-secondary" style="padding: 3px 7px; font-size: 10px; border-color: rgba(0,240,255,0.4); color: var(--accent-cyan);" onclick="openPreMarketModal('${c.symbol}')" title="Pre-Market Session Intel">
+                🌅 Pre-Mkt
               </button>
             </div>
           </td>
@@ -2207,24 +2355,144 @@
       triggerDecisionCycle();
     }
 
+    // ── Pre-Market Session Modal logic ──────────────────────────────
+    let currentPmModalSymbol = 'RELIANCE';
+
+    function openPreMarketModalCurrent() {
+      const sym = document.getElementById('statFundSymbol') ? document.getElementById('statFundSymbol').textContent.trim() : (document.getElementById('symbolSelect').value || 'RELIANCE');
+      openPreMarketModal(sym);
+    }
+
+    async function openPreMarketModal(symbol) {
+      currentPmModalSymbol = symbol;
+      try {
+        const res = await fetch(`/api/pre-market?symbol=${symbol}`);
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        document.getElementById('pmSymbolTitle').textContent = `${data.symbol} Pre-Market Session (09:00 - 09:15 IST)`;
+        document.getElementById('pmSectorSubtitle').textContent = `NSE / BSE Pre-Open Call Auction · Indicative Equilibrium Price · Order Book Imbalance`;
+
+        const compScoreEl = document.getElementById('pmCompositeScore');
+        compScoreEl.textContent = (data.pre_market_score >= 0 ? '+' : '') + data.pre_market_score.toFixed(2) + ' / 1.0';
+        const isBullish = data.pre_market_score > 0.20;
+        const isBearish = data.pre_market_score < -0.20;
+        compScoreEl.style.color = isBullish ? 'var(--accent-cyan)' : (isBearish ? 'var(--accent-red)' : 'var(--text-muted)');
+
+        const regBadge = document.getElementById('pmRegimeBadge');
+        regBadge.className = `badge-pill ${isBullish ? 'pill-green' : (isBearish ? 'pill-red' : 'pill-gray')}`;
+        regBadge.textContent = `${data.pre_market_regime} (Vote: ${data.pre_market_vote >= 0 ? '+' : ''}${data.pre_market_vote.toFixed(1)})`;
+
+        document.getElementById('pmHeaderIep').textContent = `₹${data.iep_price.toLocaleString('en-IN', {minimumFractionDigits: 2})} (${data.gap_pct >= 0 ? '+' : ''}${data.gap_pct.toFixed(2)}%)`;
+        document.getElementById('pmHeaderImbalance').textContent = `${data.order_imbalance_ratio >= 0 ? '+' : ''}${data.order_imbalance_ratio.toFixed(3)} (${data.order_imbalance_ratio > 0 ? 'Buyers Lead' : (data.order_imbalance_ratio < 0 ? 'Sellers Lead' : 'Balanced')})`;
+        document.getElementById('pmHeaderVolSurge').textContent = `${data.volume_surge_ratio.toFixed(2)}x Avg`;
+        document.getElementById('pmHeaderMacro').textContent = data.gift_nifty_alignment > 0 ? 'Aligned (+Macro Cue)' : (data.gift_nifty_alignment < 0 ? 'Diverging' : 'Neutral');
+
+        document.getElementById('pmSentimentText').textContent = data.rationale && data.rationale.length > 1 ? data.rationale[1] : (data.institutional_sentiment || 'Balanced opening auction.');
+
+        // 1. IEP & Gap
+        document.getElementById('pmGapBadge').textContent = data.gap_type;
+        document.getElementById('pmGapBadge').className = `badge-pill ${data.gap_pct > 0.3 ? 'pill-green' : (data.gap_pct < -0.3 ? 'pill-red' : 'pill-gray')}`;
+        document.getElementById('pmIepPrice').textContent = `₹${data.iep_price.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        document.getElementById('pmPrevClose').textContent = `₹${data.prev_close.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        document.getElementById('pmGapPct').textContent = `${data.gap_pct >= 0 ? '+' : ''}${data.gap_pct.toFixed(2)}%`;
+        document.getElementById('pmGapPct').style.color = data.gap_pct > 0 ? 'var(--accent-green)' : (data.gap_pct < 0 ? 'var(--accent-red)' : 'var(--text-main)');
+        document.getElementById('pmSpread').textContent = `${data.volatility_spread_pct.toFixed(2)}% (Auction High/Low Range)`;
+
+        // 2. Depth & Imbalance
+        document.getElementById('pmImbalanceBadge').textContent = `${data.order_imbalance_ratio >= 0 ? '+' : ''}${data.order_imbalance_ratio.toFixed(2)} IMB`;
+        document.getElementById('pmImbalanceBadge').className = `badge-pill ${data.order_imbalance_ratio > 0 ? 'pill-blue' : (data.order_imbalance_ratio < 0 ? 'pill-red' : 'pill-gray')}`;
+        document.getElementById('pmImbalanceRatio').textContent = `${data.order_imbalance_ratio >= 0 ? '+' : ''}${data.order_imbalance_ratio.toFixed(3)}`;
+
+        // 3. Volume Surge
+        document.getElementById('pmVolSurgeBadge').textContent = `${data.volume_surge_ratio.toFixed(2)}x SURGE`;
+        document.getElementById('pmVolSurgeBadge').className = `badge-pill ${data.volume_surge_ratio >= 1.25 ? 'pill-yellow' : 'pill-gray'}`;
+        document.getElementById('pmSurgeRatio').textContent = `${data.volume_surge_ratio.toFixed(2)}x`;
+        document.getElementById('pmLiquidityGrade').textContent = data.volume_surge_ratio >= 1.25 ? 'HIGH (Institutional Conviction)' : 'NORMAL';
+
+        // 4. Macro Cues & Gate 8
+        const gate8Passed = !(data.pre_market_regime === 'BEARISH_BREAKDOWN' || data.pre_market_vote < -0.3);
+        document.getElementById('pmGate8Badge').textContent = gate8Passed ? 'GATE 8 PASSED' : 'GATE 8 VETO';
+        document.getElementById('pmGate8Badge').className = `badge-pill ${gate8Passed ? 'pill-green' : 'pill-red'}`;
+        document.getElementById('pmMacroAlign').textContent = `${data.gift_nifty_alignment >= 0 ? '+' : ''}${data.gift_nifty_alignment.toFixed(2)}`;
+        document.getElementById('pmVote').textContent = `${data.pre_market_vote >= 0 ? '+' : ''}${data.pre_market_vote.toFixed(2)}`;
+        document.getElementById('pmVote').style.color = data.pre_market_vote > 0 ? 'var(--accent-green)' : (data.pre_market_vote < 0 ? 'var(--accent-red)' : 'var(--text-muted)');
+        document.getElementById('pmGateStatus').textContent = gate8Passed ? 'CONFIRMED (Ready For Open)' : 'BLOCKED (Pre-Market Dump Trap)';
+        document.getElementById('pmGateStatus').style.color = gate8Passed ? 'var(--accent-green)' : 'var(--accent-red)';
+
+        // Rationale list
+        const rList = document.getElementById('pmRationaleList');
+        rList.innerHTML = (data.rationale && data.rationale.length > 0)
+          ? data.rationale.map(r => `<li>${r}</li>`).join('')
+          : '<li>Orderly indicative price discovery verified.</li>';
+
+        document.getElementById('btnPmModalRunCycle').textContent = `⚡ Run Autonomous Cycle on ${symbol}`;
+        document.getElementById('preMarketModal').classList.remove('hidden');
+
+      } catch (err) {
+        console.error('Error fetching Pre-Market intel:', err);
+        alert('Failed to load Pre-Market intel: ' + err.message);
+      }
+    }
+
+    function closePreMarketModal() {
+      document.getElementById('preMarketModal').classList.add('hidden');
+    }
+
+    function triggerCycleForPmSymbol() {
+      closePreMarketModal();
+      document.getElementById('symbolSelect').value = currentPmModalSymbol;
+      updateAgent1CardForSymbol(currentPmModalSymbol);
+      updateAgent2CardForSymbol(currentPmModalSymbol);
+      triggerDecisionCycle();
+    }
+
     async function updateAgent2CardForSymbol(symbol) {
       try {
         const res = await fetch(`/api/smc?symbol=${symbol}`);
         const data = await res.json();
-        if (data.error) return;
-        const b = document.getElementById('statSmcBadge');
-        if (b) {
-          b.textContent = data.market_structure;
-          b.className = `badge-pill ${data.smc_bias === 'BULLISH' ? 'pill-green' : (data.smc_bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+        if (!data.error) {
+          const b = document.getElementById('statSmcBadge');
+          if (b) {
+            b.textContent = data.market_structure;
+            b.className = `badge-pill ${data.smc_bias === 'BULLISH' ? 'pill-green' : (data.smc_bias === 'BEARISH' ? 'pill-red' : 'pill-gray')}`;
+          }
+          const sc = document.getElementById('statSmcScore');
+          if (sc) {
+            sc.textContent = (data.smc_composite_score >= 0 ? '+' : '') + data.smc_composite_score.toFixed(2);
+            sc.style.color = data.smc_bias === 'BULLISH' ? 'var(--accent-green)' : (data.smc_bias === 'BEARISH' ? 'var(--accent-red)' : 'var(--text-muted)');
+          }
+          const drv = document.getElementById('statSmcDrivers');
+          if (drv) {
+            drv.textContent = `${data.liquidity_event} · ${data.active_order_block ? data.active_order_block.type : 'No OB'} · ${data.dealing_range_zone} (${data.dealing_range_pct}%)`;
+          }
         }
-        const sc = document.getElementById('statSmcScore');
-        if (sc) {
-          sc.textContent = (data.smc_composite_score >= 0 ? '+' : '') + data.smc_composite_score.toFixed(2);
-          sc.style.color = data.smc_bias === 'BULLISH' ? 'var(--accent-green)' : (data.smc_bias === 'BEARISH' ? 'var(--accent-red)' : 'var(--text-muted)');
-        }
-        const drv = document.getElementById('statSmcDrivers');
-        if (drv) {
-          drv.textContent = `${data.liquidity_event} · ${data.active_order_block ? data.active_order_block.type : 'No OB'} · ${data.dealing_range_zone} (${data.dealing_range_pct}%)`;
+
+        // Also update Pre-Market session metrics on Agent 2 card
+        try {
+          const pmRes = await fetch(`/api/pre-market?symbol=${symbol}`);
+          const pmData = await pmRes.json();
+          if (!pmData.error) {
+            const pmB = document.getElementById('statPmBadge');
+            if (pmB) {
+              pmB.textContent = pmData.pre_market_regime;
+              pmB.className = `badge-pill ${pmData.pre_market_vote > 0 ? 'pill-green' : (pmData.pre_market_vote < 0 ? 'pill-red' : 'pill-gray')}`;
+            }
+            const pmSc = document.getElementById('statPmScore');
+            if (pmSc) {
+              pmSc.textContent = (pmData.pre_market_score >= 0 ? '+' : '') + pmData.pre_market_score.toFixed(2);
+              pmSc.style.color = pmData.pre_market_vote > 0 ? 'var(--accent-cyan)' : (pmData.pre_market_vote < 0 ? 'var(--accent-red)' : 'var(--text-muted)');
+            }
+            const pmDrv = document.getElementById('statPmDrivers');
+            if (pmDrv) {
+              pmDrv.textContent = `IEP ₹${pmData.iep_price.toFixed(2)} (${pmData.gap_pct >= 0 ? '+' : ''}${pmData.gap_pct.toFixed(2)}%) · ${pmData.volume_surge_ratio.toFixed(2)}x Vol · ${pmData.order_imbalance_ratio >= 0 ? '+' : ''}${pmData.order_imbalance_ratio.toFixed(2)} Imbalance`;
+            }
+          }
+        } catch (e2) {
+          console.error('Error updating Agent 2 Pre-Market card:', e2);
         }
       } catch (e) {
         console.error('Error updating Agent 2 SMC card:', e);

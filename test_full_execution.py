@@ -2,7 +2,7 @@
 import sys
 sys.path.insert(0, '.')
 from datetime import datetime
-from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES
+from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES, SMC_PROFILES, PRE_MARKET_PROFILES
 from src.data.feed import Quote, CompanyFundamentals, MacroContext
 from src.agents.agent1_fundamental import FundamentalAnalystAgent
 from src.agents.agent2_technical import TechnicalAnalystAgent
@@ -71,7 +71,9 @@ for symbol in NIFTY50_UNIVERSE.keys():
         "rsi14": rsi_val, "macd_hist": macd_val,
         "atr14": px * 0.012, "vwap": px / vwap_r, "volume_ratio": vol_ratio,
         "sector_rs_score": 65.0, "news_sentiment_score": 0.3,
-        "orderflow": ORDER_FLOW_PROFILES.get(symbol, {})
+        "orderflow": ORDER_FLOW_PROFILES.get(symbol, {}),
+        "smc": SMC_PROFILES.get(symbol, {}),
+        "pre_market": PRE_MARKET_PROFILES.get(symbol, {})
     }
 
     result = orch.run_cycle_for_symbol(

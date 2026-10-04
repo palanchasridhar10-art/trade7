@@ -33,8 +33,9 @@ from src.broker.paper import PaperBroker
 from src.broker.angel_one import AngelOneAdapter
 from src.memory.journal import TradeJournal
 from src.orchestrator.pipeline import TradingOrchestrator
-from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES, SMC_PROFILES
+from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_PROFILES, SMC_PROFILES, PRE_MARKET_PROFILES
 from src.data.smc import compute_smc_metrics, SMCData
+from src.data.pre_market import compute_pre_market_metrics, PreMarketData
 from src.data.daily_updater import DailyDataManager
 
 # Global state
@@ -107,13 +108,17 @@ def populate_initial_analysis():
 
         smc_prof = daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
         of_prof = daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, {}))
+        pm_prof = daily_manager.daily_pre_market.get(symbol, PRE_MARKET_PROFILES.get(symbol, {}))
+        pm_metrics = daily_manager.get_pre_market_data(symbol)
+
         pm = temp_orch.compute_day_profit_potential(
             win_prob=win_p,
             fund_score=fund_score,
             adx=tp.get("adx", 20.0),
             volume_ratio=tp.get("volume_ratio", 1.0),
             orderflow=of_prof,
-            smc=smc_prof
+            smc=smc_prof,
+            pre_market=pm_metrics
         )
 
         analysis_summary[symbol] = {
@@ -147,6 +152,7 @@ def populate_initial_analysis():
             "reason":             f"Multi-Timeframe Fund: Daily {daily_score} | Monthly {monthly_score} | Yearly {yearly_score} (Composite: {fund_score})",
             "orderflow":          of_prof,
             "smc":                smc_prof,
+            "pre_market":         pm_metrics,
             "features":           {"gate_passed": gate_passed},
             "order":              None,
             "scanned_at":         datetime.now().isoformat(),
@@ -277,7 +283,8 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
         "sector_rs_score":    65.0,
         "news_sentiment_score": daily_manager.daily_fundamentals.get(symbol, {}).get("news_sentiment", 0.3),
         "orderflow":          daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, ORDER_FLOW_PROFILES.get("RELIANCE", {}))),
-        "smc":                daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
+        "smc":                daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {})),
+        "pre_market":         daily_manager.daily_pre_market.get(symbol, PRE_MARKET_PROFILES.get(symbol, {}))
     }
 
     return orch.run_cycle_for_symbol(
@@ -411,6 +418,7 @@ def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, fo
             "reason":             reason,
             "orderflow":          result.get("orderflow", {}),
             "smc":                result.get("smc", SMC_PROFILES.get(symbol, {})),
+            "pre_market":         result.get("pre_market", daily_manager.get_pre_market_data(symbol)),
             "features":           result.get("features", {}),
             "order":              order_payload,
             "scanned_at":         datetime.now().isoformat(),
@@ -471,7 +479,8 @@ def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, fo
                 "direction": top_cand.get("tech_direction"),
                 "confidence": top_cand.get("tech_confidence"),
                 "smc": top_cand.get("smc", {}),
-                "orderflow": top_cand.get("orderflow", {})
+                "orderflow": top_cand.get("orderflow", {}),
+                "pre_market": top_cand.get("pre_market", {})
             },
             "consensus": top_cand.get("consensus_reached"),
             "win_prob": top_cand.get("tech_confidence"),
@@ -725,6 +734,25 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 self._send_json(200, {
                     "total": len(smc_all),
                     "smc": smc_all
+                })
+
+        elif self.path.startswith("/api/pre-market"):
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            sym = params.get("symbol", [None])[0]
+            if sym:
+                sym_clean = sym.upper().strip()
+                if sym_clean in NIFTY50_UNIVERSE:
+                    pm = daily_manager.get_pre_market_data(sym_clean)
+                    self._send_json(200, pm)
+                else:
+                    self._send_json(404, {"error": f"Symbol {sym_clean} not found in Nifty 50 universe"})
+            else:
+                all_pm = daily_manager.get_pre_market_data()
+                self._send_json(200, {
+                    "total": len(all_pm),
+                    "pre_market": all_pm
                 })
 
         elif self.path == "/api/daily-status":

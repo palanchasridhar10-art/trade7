@@ -52,6 +52,7 @@ class TradingOrchestrator:
         volume_ratio: float,
         orderflow: Dict[str, Any],
         smc: Optional[Dict[str, Any]] = None,
+        pre_market: Optional[Dict[str, Any]] = None,
         target_pct: float = 18.0,
         stop_pct: float = 5.0
     ) -> Dict[str, float]:
@@ -78,7 +79,18 @@ class TradingOrchestrator:
             if "SWEPT" in smc_liq:
                 smc_factor += 0.10
 
-        alpha_score = ev_pct * fund_factor * adx_factor * vol_factor * of_factor * smc_factor
+        pm_factor = 1.0
+        if pre_market:
+            pm_vote = pre_market.get("pre_market_vote", pre_market.get("vote", 0.0))
+            pm_regime = pre_market.get("pre_market_regime", pre_market.get("regime", "BALANCED_OPEN"))
+            if pm_regime == "BULLISH_RUNAWAY" or pm_vote > 0.5:
+                pm_factor += 0.15
+            elif pm_regime == "BEARISH_BREAKDOWN" or pm_vote < -0.5:
+                pm_factor -= 0.15
+            elif pm_regime == "GAP_DOWN_ACCUMULATION":
+                pm_factor += 0.08
+
+        alpha_score = ev_pct * fund_factor * adx_factor * vol_factor * of_factor * smc_factor * pm_factor
         return {
             "expected_profit_pct": round(ev_pct, 2),
             "leveraged_expected_profit_pct": round(ev_pct * 5.0, 2),  # 5x broker margin leverage
@@ -86,7 +98,8 @@ class TradingOrchestrator:
             "fund_factor": round(fund_factor, 3),
             "momentum_factor": round(adx_factor * vol_factor, 3),
             "orderflow_factor": round(of_factor, 3),
-            "smc_factor": round(smc_factor, 3)
+            "smc_factor": round(smc_factor, 3),
+            "pre_market_factor": round(pm_factor, 3)
         }
 
     def run_cycle_for_symbol(
@@ -144,6 +157,7 @@ class TradingOrchestrator:
                 volume_ratio=technical_inputs.get("volume_ratio", 1.0),
                 orderflow=technical_inputs.get("orderflow"),
                 smc=technical_inputs.get("smc"),
+                pre_market=technical_inputs.get("pre_market"),
                 portfolio_capital=portfolio.total_capital,
                 now=now
             )
@@ -169,7 +183,8 @@ class TradingOrchestrator:
             adx=technical_inputs.get("adx", 20.0),
             volume_ratio=technical_inputs.get("volume_ratio", 1.0),
             orderflow=technical_inputs.get("orderflow") or {},
-            smc=tech_signal.features
+            smc=tech_signal.features,
+            pre_market=tech_signal.features
         )
 
         # Step 5: Execution Decision
@@ -258,6 +273,18 @@ class TradingOrchestrator:
                 "active_order_block": tech_signal.features.get("smc_active_order_block"),
                 "active_fvg": tech_signal.features.get("smc_active_fvg"),
                 "institutional_narrative": tech_signal.features.get("smc_narrative", "")
+            },
+            "pre_market": {
+                "pre_market_score": tech_signal.features.get("pre_market_score", 0.0),
+                "pre_market_vote": tech_signal.features.get("pre_market_vote", 0.0),
+                "pre_market_gap_pct": tech_signal.features.get("pre_market_gap_pct", 0.0),
+                "pre_market_gap_type": tech_signal.features.get("pre_market_gap_type", "FLAT"),
+                "pre_market_regime": tech_signal.features.get("pre_market_regime", "BALANCED_OPEN"),
+                "order_imbalance_ratio": tech_signal.features.get("pre_market_order_imbalance_ratio", 0.0),
+                "volume_surge_ratio": tech_signal.features.get("pre_market_volume_surge_ratio", 1.0),
+                "gift_nifty_alignment": tech_signal.features.get("gift_nifty_alignment", 0.0),
+                "iep_price": tech_signal.features.get("iep_price", quote.last_price),
+                "iep_volume": tech_signal.features.get("iep_volume", 0)
             },
             "tech_rationale": tech_signal.rationale
         }

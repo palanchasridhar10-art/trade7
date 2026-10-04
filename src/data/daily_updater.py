@@ -24,12 +24,19 @@ from src.data.universe import (
     TECHNICAL_PROFILES,
     ORDER_FLOW_PROFILES,
     SMC_PROFILES,
+    PRE_MARKET_PROFILES,
 )
 from src.data.smc import (
     MarketStructureType,
     LiquidityEventType,
     OrderBlockType,
     FVGType,
+)
+from src.data.pre_market import (
+    PreMarketData,
+    PreMarketAnalysis,
+    PreMarketRegime,
+    compute_pre_market_metrics,
 )
 
 logger = logging.getLogger("daily_updater")
@@ -68,6 +75,7 @@ class DailyDataManager:
         self.daily_technicals: Dict[str, Dict[str, Any]] = {}
         self.daily_smc: Dict[str, Dict[str, Any]] = {}
         self.daily_orderflow: Dict[str, Dict[str, Any]] = {}
+        self.daily_pre_market: Dict[str, Dict[str, Any]] = {}
         self.daily_quotes: Dict[str, Dict[str, Any]] = {}
         self.macro_context: Optional[MacroContext] = None
 
@@ -117,7 +125,11 @@ class DailyDataManager:
         for sym, of in ORDER_FLOW_PROFILES.items():
             self.daily_orderflow[sym] = dict(of)
 
-        # 5. Universe Quotes & Prices
+        # 5. Pre-Market Session (Agent 2)
+        for sym, pm in PRE_MARKET_PROFILES.items():
+            self.daily_pre_market[sym] = dict(pm)
+
+        # 6. Universe Quotes & Prices
         for sym, u in NIFTY50_UNIVERSE.items():
             self.daily_quotes[sym] = {
                 "price": float(u.get("price", 1000.0)),
@@ -150,6 +162,7 @@ class DailyDataManager:
                 tech_map=self.daily_technicals,
                 smc_map=self.daily_smc,
                 of_map=self.daily_orderflow,
+                pre_market_map=self.daily_pre_market,
                 update_date=self.active_market_date.isoformat()
             )
 
@@ -427,6 +440,40 @@ class DailyDataManager:
                 "trading_date": self.active_market_date.isoformat()
             }
 
+            # ── Agent 2 Daily Pre-Market Session (09:00 - 09:15 IST) ──
+            pm_base_vol = 22_000
+            if daily_pct > 0.4:
+                pm_buy = int(115_000 * vol_ratio)
+                pm_sell = int(50_000 / max(0.5, vol_ratio))
+                pm_vol = int(pm_base_vol * 1.55 * vol_ratio)
+                pm_gap = round(min(2.5, max(0.4, daily_pct * 0.8)), 2)
+            elif daily_pct < -0.4:
+                pm_buy = int(45_000 / max(0.5, vol_ratio))
+                pm_sell = int(105_000 * vol_ratio)
+                pm_vol = int(pm_base_vol * 1.45 * vol_ratio)
+                pm_gap = round(max(-2.5, min(-0.4, daily_pct * 0.8)), 2)
+            else:
+                pm_buy = 58_000
+                pm_sell = 52_000
+                pm_vol = int(pm_base_vol * 1.05)
+                pm_gap = round(daily_pct * 0.5, 2)
+
+            pm_prev_close = round(new_price / (1.0 + (pm_gap / 100.0)), 2)
+            self.daily_pre_market[sym] = {
+                "symbol": sym,
+                "prev_close": pm_prev_close,
+                "iep_price": round(new_price, 2),
+                "iep_volume": pm_vol,
+                "avg_pre_market_volume_20d": pm_base_vol,
+                "total_buy_qty": pm_buy,
+                "total_sell_qty": pm_sell,
+                "iep_high": round(new_price * 1.003, 2),
+                "iep_low": round(new_price * 0.997, 2),
+                "gift_nifty_change_pct": 0.35 if market_bias == "BULLISH" else (-0.35 if market_bias == "BEARISH" else 0.05),
+                "last_updated": now.isoformat(),
+                "trading_date": self.active_market_date.isoformat()
+            }
+
         # ── 3. Push to Agent Instances & Tables ─────────────────────────────
         self._push_data_to_agents()
 
@@ -475,6 +522,7 @@ class DailyDataManager:
         technical: Optional[Dict[str, Any]] = None,
         smc: Optional[Dict[str, Any]] = None,
         orderflow: Optional[Dict[str, Any]] = None,
+        pre_market: Optional[Dict[str, Any]] = None,
         quote: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Allows direct ingestion/updating of a single company's daily metrics."""
@@ -514,12 +562,21 @@ class DailyDataManager:
             self.daily_orderflow[symbol] = current_o
             ORDER_FLOW_PROFILES[symbol] = current_o
 
+        if pre_market:
+            current_pm = self.daily_pre_market.get(symbol, {})
+            current_pm.update(pre_market)
+            current_pm["last_updated"] = now_str
+            current_pm["trading_date"] = self.active_market_date.isoformat()
+            self.daily_pre_market[symbol] = current_pm
+            PRE_MARKET_PROFILES[symbol] = current_pm
+
         if self.agent2 and hasattr(self.agent2, "update_daily_technicals"):
             self.agent2.update_daily_technicals(
                 symbol=symbol,
                 tech_dict=self.daily_technicals.get(symbol, {}),
                 smc_dict=self.daily_smc.get(symbol, {}),
-                orderflow_dict=self.daily_orderflow.get(symbol, {})
+                orderflow_dict=self.daily_orderflow.get(symbol, {}),
+                pre_market_dict=self.daily_pre_market.get(symbol, {})
             )
 
         if quote:
@@ -564,6 +621,34 @@ class DailyDataManager:
             "india_vix": self.macro_context.india_vix
         }
 
+    def get_pre_market_data(self, symbol: Optional[str] = None) -> Dict[str, Any]:
+        """Returns computed pre-market session analysis for a specific symbol or all universe symbols."""
+        if symbol:
+            sym_clean = symbol.upper().strip()
+            pm_data = self.daily_pre_market.get(sym_clean, PRE_MARKET_PROFILES.get(sym_clean, {}))
+            if not pm_data:
+                return {}
+            px = self.daily_quotes.get(sym_clean, {}).get("price", NIFTY50_UNIVERSE.get(sym_clean, {}).get("price", 1000.0))
+            data_copy = dict(pm_data)
+            data_copy.setdefault("symbol", sym_clean)
+            data_copy.setdefault("iep_price", px)
+            if "prev_close" not in data_copy:
+                data_copy["prev_close"] = px
+            analysis = compute_pre_market_metrics(data_copy)
+            return analysis.model_dump()
+        else:
+            all_pm = {}
+            for s in self.daily_pre_market.keys():
+                pm_data = self.daily_pre_market.get(s, {})
+                px = self.daily_quotes.get(s, {}).get("price", NIFTY50_UNIVERSE.get(s, {}).get("price", 1000.0))
+                data_copy = dict(pm_data)
+                data_copy.setdefault("symbol", s)
+                data_copy.setdefault("iep_price", px)
+                if "prev_close" not in data_copy:
+                    data_copy["prev_close"] = px
+                all_pm[s] = compute_pre_market_metrics(data_copy).model_dump()
+            return all_pm
+
     def get_status(self) -> Dict[str, Any]:
         """Returns the current operational status of the daily data update engine."""
         now = NSECalendar.get_ist_now()
@@ -580,6 +665,7 @@ class DailyDataManager:
             "last_updated_at": self.last_updated_at.isoformat(),
             "seconds_since_last_update": int(time_diff),
             "total_symbols_synced": len(self.daily_fundamentals),
+            "total_pre_market_synced": len(self.daily_pre_market),
             "update_count": self.update_count,
             "macro_snapshot": {
                 "nifty50_close": self.macro_context.nifty50_close if self.macro_context else 25450.0,
@@ -603,6 +689,7 @@ class DailyDataManager:
 
     def get_symbol_daily_data(self, symbol: str) -> Dict[str, Any]:
         """Returns consolidated daily multi-agent data for a single symbol."""
+        pm = self.get_pre_market_data(symbol)
         return {
             "symbol": symbol,
             "trading_date": self.active_market_date.isoformat(),
@@ -610,5 +697,7 @@ class DailyDataManager:
             "fundamentals": self.daily_fundamentals.get(symbol, {}),
             "technicals": self.daily_technicals.get(symbol, {}),
             "smc": self.daily_smc.get(symbol, {}),
-            "orderflow": self.daily_orderflow.get(symbol, {})
+            "orderflow": self.daily_orderflow.get(symbol, {}),
+            "pre_market": self.daily_pre_market.get(symbol, {}),
+            "pre_market_analysis": pm
         }

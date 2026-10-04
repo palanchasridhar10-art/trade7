@@ -351,3 +351,97 @@ def _build_smc_profiles() -> Dict[str, Dict[str, Any]]:
 
 SMC_PROFILES: Dict[str, Dict[str, Any]] = _build_smc_profiles()
 
+
+def _build_pre_market_profiles() -> Dict[str, Dict[str, Any]]:
+    """Build baseline Indian Stock Market pre-market session profiles (09:00 - 09:15 IST)."""
+    profiles: Dict[str, Dict[str, Any]] = {}
+
+    for sym, data in NIFTY50_UNIVERSE.items():
+        px = data.get("price", 1000.0)
+
+        if sym in ["RELIANCE", "TATAMOTORS", "COALINDIA", "TATASTEEL", "ADANIENT", "LT", "HINDALCO"]:
+            # Strong Bullish Pre-Market Profile (BULLISH_RUNAWAY)
+            gap_pct = 1.15
+            prev_close = round(px / (1.0 + (gap_pct / 100.0)), 2)
+            avg_vol = 25000
+            iep_vol = int(avg_vol * 1.65)
+            buy_qty = 115000
+            sell_qty = 52000
+            profiles[sym] = {
+                "symbol": sym,
+                "prev_close": prev_close,
+                "iep_price": px,
+                "iep_volume": iep_vol,
+                "avg_pre_market_volume_20d": avg_vol,
+                "total_buy_qty": buy_qty,
+                "total_sell_qty": sell_qty,
+                "iep_high": round(px * 1.004, 2),
+                "iep_low": round(px * 0.997, 2),
+                "gift_nifty_change_pct": 0.42
+            }
+        elif sym in ["TCS", "INFY", "WIPRO", "HCLTECH"]:
+            # Bearish Pre-Market Profile (BEARISH_BREAKDOWN)
+            gap_pct = -1.25
+            prev_close = round(px / (1.0 + (gap_pct / 100.0)), 2)
+            avg_vol = 24000
+            iep_vol = int(avg_vol * 1.50)
+            buy_qty = 42000
+            sell_qty = 98000
+            profiles[sym] = {
+                "symbol": sym,
+                "prev_close": prev_close,
+                "iep_price": px,
+                "iep_volume": iep_vol,
+                "avg_pre_market_volume_20d": avg_vol,
+                "total_buy_qty": buy_qty,
+                "total_sell_qty": sell_qty,
+                "iep_high": round(px * 1.002, 2),
+                "iep_low": round(px * 0.994, 2),
+                "gift_nifty_change_pct": 0.15
+            }
+        elif sym in ["SUNPHARMA", "CIPLA", "DRREDDY"]:
+            # Gap Down Accumulation Profile (smart money absorbing dips)
+            gap_pct = -0.90
+            prev_close = round(px / (1.0 + (gap_pct / 100.0)), 2)
+            avg_vol = 18000
+            iep_vol = int(avg_vol * 1.25)
+            buy_qty = 75000
+            sell_qty = 45000
+            profiles[sym] = {
+                "symbol": sym,
+                "prev_close": prev_close,
+                "iep_price": px,
+                "iep_volume": iep_vol,
+                "avg_pre_market_volume_20d": avg_vol,
+                "total_buy_qty": buy_qty,
+                "total_sell_qty": sell_qty,
+                "iep_high": round(px * 1.003, 2),
+                "iep_low": round(px * 0.996, 2),
+                "gift_nifty_change_pct": 0.10
+            }
+        else:
+            # Balanced / Orderly Open
+            gap_pct = 0.20
+            prev_close = round(px / (1.0 + (gap_pct / 100.0)), 2)
+            avg_vol = 16000
+            iep_vol = int(avg_vol * 1.05)
+            buy_qty = 58000
+            sell_qty = 54000
+            profiles[sym] = {
+                "symbol": sym,
+                "prev_close": prev_close,
+                "iep_price": px,
+                "iep_volume": iep_vol,
+                "avg_pre_market_volume_20d": avg_vol,
+                "total_buy_qty": buy_qty,
+                "total_sell_qty": sell_qty,
+                "iep_high": round(px * 1.002, 2),
+                "iep_low": round(px * 0.998, 2),
+                "gift_nifty_change_pct": 0.25
+            }
+
+    return profiles
+
+PRE_MARKET_PROFILES: Dict[str, Dict[str, Any]] = _build_pre_market_profiles()
+
+
