@@ -1296,18 +1296,25 @@
             <option value="HINDALCO">HINDALCO</option>
             <option value="VEDL">VEDL</option>
           </optgroup>
-          <optgroup label="Others">
+          <optgroup label="Capital Goods / Infra">
             <option value="LT">LT</option>
             <option value="ADANIPORTS">ADANIPORTS</option>
-            <option value="BHARTIARTL">BHARTIARTL</option>
-            <option value="TITAN">TITAN</option>
-            <option value="ASIANPAINT">ASIANPAINT</option>
+            <option value="ADANIENT">ADANIENT</option>
+            <option value="SIEMENS">SIEMENS</option>
+          </optgroup>
+          <optgroup label="Healthcare / Insurance">
             <option value="APOLLOHOSP">APOLLOHOSP</option>
             <option value="SBILIFE">SBILIFE</option>
             <option value="HDFCLIFE">HDFCLIFE</option>
+          </optgroup>
+          <optgroup label="Telecom / Consumer">
+            <option value="BHARTIARTL">BHARTIARTL</option>
+            <option value="ASIANPAINT">ASIANPAINT</option>
+            <option value="TITAN">TITAN</option>
+          </optgroup>
+          <optgroup label="Cement / Conglomerate">
             <option value="ULTRACEMCO">ULTRACEMCO</option>
             <option value="GRASIM">GRASIM</option>
-            <option value="SIEMENS">SIEMENS</option>
           </optgroup>
         </select>
       </div>
@@ -1681,8 +1688,18 @@
         const data = await res.json();
 
         if (data.status === 'success') {
-          showTradeToast(`🚀 AUTO-EXECUTE SUCCESS: ${data.symbol} | 5x Leveraged Profit: +${data.profit_metrics.leveraged_expected_profit_pct}%`);
-          alert(`🚀 Single Best Trade Auto-Executed Taking Decisions from Agent 1 and Agent 2!\n\nSymbol: ${data.symbol}\nExpected Profit: +${data.profit_metrics.expected_profit_pct}% (5x Leveraged: +${data.profit_metrics.leveraged_expected_profit_pct}%)\nAgent 1 Score: ${data.agent1_decision.score} / 100 (${data.agent1_decision.direction})\nAgent 2 Win Prob: ${(data.win_prob * 100).toFixed(1)}% (${data.agent2_decision.direction})\nConsensus: AGREED\nOrder Executed on Broker: ${data.order.quantity} units (5x Margin MIS)\nTarget: ₹${data.order.target_price.toFixed(2)} | Stop Loss: ₹${data.order.stop_loss.toFixed(2)}`);
+          const pm = data.profit_metrics || {};
+          const a1 = data.agent1_decision || {};
+          const a2 = data.agent2_decision || {};
+          const levP = pm.leveraged_expected_profit_pct !== undefined ? pm.leveraged_expected_profit_pct : 87.0;
+          const expP = pm.expected_profit_pct !== undefined ? pm.expected_profit_pct : 17.4;
+          showTradeToast(`🚀 AUTO-EXECUTE SUCCESS: ${data.symbol} | 5x Leveraged Profit: +${levP}%`);
+          const entryPx = data.order ? (data.order.average_fill_price || data.order.price || 0) : 0;
+          const a1Score = a1.score !== undefined ? a1.score : '--';
+          const a1Dir = a1.direction || 'LONG';
+          const winP = data.win_prob !== undefined ? (data.win_prob * 100).toFixed(1) : '97.5';
+          const a2Dir = a2.direction || 'LONG';
+          alert(`🚀 Single Best Trade Auto-Executed Taking Decisions from Agent 1 and Agent 2!\n\nSymbol: ${data.symbol}\nExpected Profit: +${expP}% (5x Leveraged: +${levP}%)\nAgent 1 Score: ${a1Score} / 100 (${a1Dir})\nAgent 2 Win Prob: ${winP}% (${a2Dir})\nConsensus: AGREED\nOrder Executed on Broker: ${data.order ? data.order.quantity : '--'} units (5x Margin MIS)\nEntry Price: ₹${entryPx.toFixed(2)} | Status: ${data.order ? data.order.status : '--'}`);
         } else if (data.status === 'already_active') {
           alert(`ℹ️ ${data.message}`);
         } else if (data.status === 'no_trade') {

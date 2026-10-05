@@ -30,7 +30,8 @@ class BaseBrokerAdapter(ABC):
         quantity: int,
         entry_price: float,
         stop_loss: float,
-        target_price: float
+        target_price: float,
+        sector: str = "GENERAL"
     ) -> Order:
         """Submit main entry order with paired SL and target brackets."""
         pass

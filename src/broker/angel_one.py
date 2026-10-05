@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from src.broker.base import BaseBrokerAdapter
 from src.core.constants import OrderSide, OrderStatus, ProductType, ExitReason
 from src.core.models import Order, Position, PortfolioState
+from src.data.angel_tokens import get_angel_token, get_angel_tradingsymbol
 
 logger = logging.getLogger(__name__)
 
@@ -177,28 +178,37 @@ class AngelOneAdapter(BaseBrokerAdapter):
         quantity: int,
         entry_price: float,
         stop_loss: float,
-        target_price: float
+        target_price: float,
+        sector: str = "GENERAL"
     ) -> Order:
         """Submit limit order with client ID tracking on Angel One."""
         now = datetime.now()
         client_order_id = f"ANGEL-{now.strftime('%H%M%S')}-{symbol[:4]}"
 
+        # Resolve official Angel One instrument token and tradingsymbol
+        token = get_angel_token(symbol)
+        trading_sym = get_angel_tradingsymbol(symbol)
+        safe_qty = max(1, int(quantity))
+        safe_entry = round(entry_price, 2)
+        sq_off = round(abs(target_price - entry_price), 2)
+        sl = round(abs(entry_price - stop_loss), 2)
+
         order_params = {
             "variety": "NORMAL",
-            "tradingsymbol": f"{symbol}-EQ",
-            "symboltoken": "", # Mapped via Angel One instrument master
+            "tradingsymbol": trading_sym,
+            "symboltoken": str(token),
             "transactiontype": side.upper(),
             "exchange": "NSE",
             "ordertype": "LIMIT",
             "producttype": "INTRADAY", # MIS
             "duration": "DAY",
-            "price": str(entry_price),
-            "squareoff": str(abs(target_price - entry_price)),
-            "stoploss": str(abs(entry_price - stop_loss)),
-            "quantity": str(quantity)
+            "price": f"{safe_entry:.2f}",
+            "squareoff": f"{sq_off:.2f}",
+            "stoploss": f"{sl:.2f}",
+            "quantity": str(safe_qty)
         }
 
-        logger.info(f"[Angel One] Submitting {side} {quantity} units of {symbol} @ ₹{entry_price:.2f}")
+        logger.info(f"[Angel One] Submitting {side} {safe_qty} units of {trading_sym} (Token: {token}) @ ₹{safe_entry:.2f}")
 
         if self.is_connected and self.smart_api:
             try:
@@ -210,8 +220,8 @@ class AngelOneAdapter(BaseBrokerAdapter):
                     symbol=symbol,
                     side=OrderSide(side),
                     product_type=ProductType.MIS,
-                    quantity=quantity,
-                    price=entry_price,
+                    quantity=safe_qty,
+                    price=safe_entry,
                     status=OrderStatus.SUBMITTED,
                     created_at=now,
                     broker_order_id=broker_order_id
@@ -219,15 +229,15 @@ class AngelOneAdapter(BaseBrokerAdapter):
             except Exception as e:
                 logger.error(f"Failed to place Angel One order: {e}")
 
-        # Fallback offline representation
+        # Fallback representation
         return Order(
             order_id=client_order_id,
             client_order_id=client_order_id,
             symbol=symbol,
             side=OrderSide(side),
             product_type=ProductType.MIS,
-            quantity=quantity,
-            price=entry_price,
+            quantity=safe_qty,
+            price=safe_entry,
             status=OrderStatus.CREATED,
             created_at=now
         )
@@ -248,21 +258,40 @@ class AngelOneAdapter(BaseBrokerAdapter):
         closed = []
         portfolio = self.get_portfolio_state()
         for sym, pos in portfolio.open_positions.items():
-            logger.info(f"[Angel One] Auto square-off ({reason}) for {sym}: {pos.quantity} units")
+            trading_sym = get_angel_tradingsymbol(sym)
+            token = pos.position_id if (pos.position_id and pos.position_id.isdigit()) else get_angel_token(sym)
+            logger.info(f"[Angel One] Auto square-off ({reason}) for {trading_sym} (Token: {token}): {pos.quantity} units")
             # Close position by sending opposite market order
             reverse_side = "SELL" if pos.side == OrderSide.BUY else "BUY"
             if self.is_connected and self.smart_api:
-                self.smart_api.placeOrder({
-                    "variety": "NORMAL",
-                    "tradingsymbol": f"{sym}-EQ",
-                    "symboltoken": pos.position_id,
-                    "transactiontype": reverse_side,
-                    "exchange": "NSE",
-                    "ordertype": "MARKET",
-                    "producttype": "INTRADAY",
-                    "duration": "DAY",
-                    "price": "0",
-                    "quantity": str(pos.quantity)
-                })
+                try:
+                    self.smart_api.placeOrder({
+                        "variety": "NORMAL",
+                        "tradingsymbol": trading_sym,
+                        "symboltoken": str(token),
+                        "transactiontype": reverse_side,
+                        "exchange": "NSE",
+                        "ordertype": "MARKET",
+                        "producttype": "INTRADAY",
+                        "duration": "DAY",
+                        "price": "0",
+                        "quantity": str(pos.quantity)
+                    })
+                except Exception as ex:
+                    logger.error(f"[Angel One] Error squaring off {trading_sym}: {ex}")
             closed.append(pos)
         return closed
+
+    def get_ltp(self, symbol: str) -> Optional[float]:
+        """Fetch real-time Last Traded Price directly from Angel One SmartAPI."""
+        if not self.is_connected or not self.smart_api:
+            return None
+        try:
+            token = get_angel_token(symbol)
+            ts = get_angel_tradingsymbol(symbol)
+            res = self.smart_api.ltpData(exchange="NSE", tradingsymbol=ts, symboltoken=token)
+            if res and res.get("status") and res.get("data"):
+                return float(res["data"].get("ltp", 0.0))
+        except Exception as e:
+            logger.error(f"[Angel One] Error fetching live LTP for {symbol}: {e}")
+        return None

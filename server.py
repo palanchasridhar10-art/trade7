@@ -215,15 +215,15 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
     # ── Dynamic daily macro context with Indian financial condition metrics ───
     macro = daily_manager.macro_context or MacroContext(
         timestamp=datetime.now(),
-        nifty50_close=25450.0,
+        nifty50_close=22555.75,
         nifty50_1w_return=1.45,
         nifty50_1m_return=3.80,
-        india_vix=13.4,
+        india_vix=14.71,
         advance_decline_ratio=1.65,
         fii_net_flow_5d_cr=4500.0,
         dii_net_flow_5d_cr=3200.0,
-        crude_oil_brent=74.5,
-        usd_inr=83.85,
+        crude_oil_brent=102.3,
+        usd_inr=96.30,
         gsec_10y_yield=6.92,
         repo_rate=6.50,
         cpi_inflation=4.60,
@@ -314,7 +314,7 @@ def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, fo
         return {
             "status": "already_active",
             "message": f"Active trade already running on {active_symbols} (Single Trade Policy: Max 1 position active).",
-            "open_positions": portfolio.open_positions,
+            "open_positions": {k: (v.model_dump() if hasattr(v, "model_dump") else v) for k, v in portfolio.open_positions.items()},
             "top_alpha_pick": top_alpha_pick
         }
 
@@ -661,7 +661,7 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "env_client_code": masked_client,
                 "has_env_api_key": bool(env_key),
                 "portfolio": portfolio.model_dump() if portfolio else None,
-                "positions": portfolio.open_positions if portfolio else {},
+                "positions": {k: v.model_dump() for k, v in portfolio.open_positions.items()} if portfolio else {},
                 "journal_stats": stats,
                 "recent_decisions": recent_decisions[-20:],
                 "auto_trading_active": auto_trading_active,
