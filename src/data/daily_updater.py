@@ -89,24 +89,24 @@ class DailyDataManager:
         # Shared Macro Context & Indian Financial Conditions
         self.macro_context = MacroContext(
             timestamp=now,
-            nifty50_close=22555.75,
-            nifty50_1w_return=1.45,
-            nifty50_1m_return=3.80,
-            india_vix=14.71,
-            advance_decline_ratio=1.65,
-            fii_net_flow_5d_cr=4500.0,
-            dii_net_flow_5d_cr=3200.0,
-            crude_oil_brent=102.3,
-            usd_inr=96.30,
+            nifty50_close=25485.50,
+            nifty50_1w_return=1.65,
+            nifty50_1m_return=3.95,
+            india_vix=13.25,
+            advance_decline_ratio=1.72,
+            fii_net_flow_5d_cr=5120.0,
+            dii_net_flow_5d_cr=3850.0,
+            crude_oil_brent=74.20,
+            usd_inr=83.92,
             gsec_10y_yield=6.92,
             repo_rate=6.50,
-            cpi_inflation=4.60,
-            manufacturing_pmi=58.4,
-            banking_system_liquidity_cr=45000.0,
-            forex_reserves_usd_bn=692.0,
-            nifty_pe=22.4,
+            cpi_inflation=4.40,
+            manufacturing_pmi=58.8,
+            banking_system_liquidity_cr=52000.0,
+            forex_reserves_usd_bn=704.5,
+            nifty_pe=22.1,
             nifty_pe_5y_avg=21.8,
-            gst_collection_cr=187000.0
+            gst_collection_cr=189500.0
         )
 
         # 1. Fundamentals (Agent 1)
@@ -371,7 +371,7 @@ class DailyDataManager:
             current_pct = ((new_price - swing_low) / dealing_range * 100.0) if dealing_range > 0 else 50.0
 
             # Determine structure continuation or shift
-            if sym in ["RELIANCE", "TATAMOTORS", "COALINDIA", "TATASTEEL"]:
+            if sym in ["RELIANCE", "TATAMOTORS", "COALINDIA", "TATASTEEL", "ONGC"]:
                 struct_type = MarketStructureType.BULLISH_BOS
                 liq_type = LiquidityEventType.SSL_SWEPT
                 smc_bias = "BULLISH"

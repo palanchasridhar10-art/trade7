@@ -53,19 +53,11 @@ agent1 = FundamentalAnalystAgent()
 agent2 = TechnicalAnalystAgent()
 agent3 = ExecutionAgent(risk_engine=risk_engine)
 
-# Daily Data Management Engine for 3 Agents
-daily_manager = DailyDataManager(
-    agent1=agent1,
-    agent2=agent2,
-    agent3=agent3,
-    risk_engine=risk_engine,
-    broker=PaperBroker()
-)
-
-active_broker = None
-active_client_code = None
-active_mode = None
-is_broker_connected = False
+# Initialize active broker session (Paper simulation active by default, ready for live switch)
+active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
+active_client_code = "PAPER_DEMO"
+active_mode = "paper"
+is_broker_connected = True
 system_start_time = datetime.now()
 recent_decisions = []
 auto_trading_active = False
@@ -74,124 +66,14 @@ auto_trade_log = []        # Stores auto-trade events for dashboard
 analysis_summary = {}      # Latest per-company analysis snapshot for dashboard
 top_alpha_pick = None      # The single #1 most profitable company of the day
 
-# Full Nifty 50 watchlist — ALL companies are analysed and ranked
-AUTO_WATCHLIST = list(NIFTY50_UNIVERSE.keys())  # 50 stocks
-AUTO_SCAN_INTERVAL_SECONDS = 60   # Scan every 60 seconds
-
-def populate_initial_analysis():
-    """Pre-computes multi-timeframe fundamental analysis (daily, monthly, yearly) and ranks the single best trade."""
-    global analysis_summary, top_alpha_pick
-
-    # Temporary orchestrator for calculating metrics
-    temp_orch = TradingOrchestrator(
-        agent1=agent1, agent2=agent2, agent3=agent3,
-        risk_engine=risk_engine, broker=PaperBroker(), journal=journal
-    )
-
-    candidates = []
-
-    for symbol in AUTO_WATCHLIST:
-        cdata = NIFTY50_UNIVERSE.get(symbol, {})
-        qdata = daily_manager.daily_quotes.get(symbol, {})
-        px = float(qdata.get("price", cdata.get("price", 0)))
-        breakdown = agent1.get_multi_timeframe_breakdown(symbol, macro=daily_manager.macro_context)
-        fund_dir = breakdown["direction"]
-        fund_score = breakdown["composite_score"]
-        daily_score = breakdown["daily"]["score"]
-        monthly_score = breakdown["monthly"]["score"]
-        yearly_score = breakdown["yearly"]["score"]
-
-        tp = daily_manager.daily_technicals.get(symbol, TECHNICAL_PROFILES.get(symbol, {}))
-        tech_dir = tp.get("direction", "NEUTRAL")
-        win_p = 0.975 if (tp.get("adx", 0) >= 28 and tp.get("rsi14", 50) > 55) else 0.50
-        gate_passed = (win_p >= 0.68 and fund_dir == "LONG")
-
-        smc_prof = daily_manager.daily_smc.get(symbol, SMC_PROFILES.get(symbol, {}))
-        of_prof = daily_manager.daily_orderflow.get(symbol, ORDER_FLOW_PROFILES.get(symbol, {}))
-        pm_prof = daily_manager.daily_pre_market.get(symbol, PRE_MARKET_PROFILES.get(symbol, {}))
-        pm_metrics = daily_manager.get_pre_market_data(symbol)
-
-        pm = temp_orch.compute_day_profit_potential(
-            win_prob=win_p,
-            fund_score=fund_score,
-            adx=tp.get("adx", 20.0),
-            volume_ratio=tp.get("volume_ratio", 1.0),
-            orderflow=of_prof,
-            smc=smc_prof,
-            pre_market=pm_metrics
-        )
-
-        analysis_summary[symbol] = {
-            "symbol":             symbol,
-            "sector":             cdata.get("sector", "EQUITY"),
-            "price":              px,
-            "fund_direction":     fund_dir,
-            "fund_confidence":    breakdown["confidence"],
-            "fund_score":         fund_score,
-            "fund_daily_score":   daily_score,
-            "fund_monthly_score": monthly_score,
-            "fund_yearly_score":  yearly_score,
-            "fund_rationale":     breakdown["daily"]["reasons"][:1] + breakdown["monthly"]["reasons"][:1] + breakdown["yearly"]["reasons"][:1],
-            "fund_features": {
-                "daily_score":   daily_score,
-                "monthly_score": monthly_score,
-                "yearly_score":  yearly_score,
-                "fund_score":    fund_score
-            },
-            "fund_breakdown":     breakdown,
-            "tech_direction":     tech_dir,
-            "action":             "NO_TRADE",
-            "gate_passed":        gate_passed,
-            "win_prob":           round(win_p, 4),
-            "consensus":          gate_passed,
-            "profit_metrics":     pm,
-            "profit_potential_score": pm["day_profit_potential_score"],
-            "expected_profit_pct": pm["expected_profit_pct"],
-            "leveraged_expected_profit_pct": pm["leveraged_expected_profit_pct"],
-            "is_top_pick":        False,
-            "reason":             f"Multi-Timeframe Fund: Daily {daily_score} | Monthly {monthly_score} | Yearly {yearly_score} (Composite: {fund_score})",
-            "orderflow":          of_prof,
-            "smc":                smc_prof,
-            "pre_market":         pm_metrics,
-            "features":           {"gate_passed": gate_passed},
-            "order":              None,
-            "scanned_at":         datetime.now().isoformat(),
-            "scan_no":            0,
-            "trading_date":       daily_manager.active_market_date.isoformat()
-        }
-
-        if gate_passed and win_p >= 0.90:
-            candidates.append(symbol)
-
-    # Rank and select the single #1 top candidate of the day
-    if candidates:
-        candidates.sort(key=lambda s: analysis_summary[s]["profit_potential_score"], reverse=True)
-        top_alpha_pick = candidates[0]
-        top_pm = analysis_summary[top_alpha_pick]["profit_metrics"]
-
-        # Highlight the single best candidate
-        for symbol in AUTO_WATCHLIST:
-            if symbol == top_alpha_pick:
-                analysis_summary[symbol]["action"] = "TRADE"
-                analysis_summary[symbol]["is_top_pick"] = True
-                analysis_summary[symbol]["reason"] = (
-                    f"★ #1 Alpha Pick of the Day: Expected Profit +{top_pm['expected_profit_pct']}% "
-                    f"(5x Leveraged: +{top_pm['leveraged_expected_profit_pct']}%) · Score: {top_pm['day_profit_potential_score']}"
-                )
-            else:
-                analysis_summary[symbol]["action"] = "NO_TRADE"
-                analysis_summary[symbol]["is_top_pick"] = False
-                if analysis_summary[symbol]["gate_passed"]:
-                    analysis_summary[symbol]["reason"] = (
-                        f"Single Best Trade Focus: Skipped in favor of #1 profit candidate {top_alpha_pick} "
-                        f"(+{top_pm['expected_profit_pct']}%)"
-                    )
-
-# Pre-populate analysis summary on startup
-try:
-    populate_initial_analysis()
-except Exception as e:
-    logger.error(f"Error populating initial analysis: {e}")
+# Daily Data Management Engine for 3 Agents
+daily_manager = DailyDataManager(
+    agent1=agent1,
+    agent2=agent2,
+    agent3=agent3,
+    risk_engine=risk_engine,
+    broker=active_broker
+)
 
 def init_orchestrator(broker_instance):
     return TradingOrchestrator(
@@ -203,7 +85,11 @@ def init_orchestrator(broker_instance):
         journal=journal
     )
 
-orchestrator = None
+orchestrator = init_orchestrator(active_broker)
+
+# Full Nifty 50 watchlist — ALL companies are analysed and ranked
+AUTO_WATCHLIST = list(NIFTY50_UNIVERSE.keys())  # 50 stocks
+AUTO_SCAN_INTERVAL_SECONDS = 60   # Scan every 60 seconds
 
 def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool = True) -> Dict[str, Any]:
     """Run a full 3-agent evaluation cycle using per-company data from the Nifty 50 universe and daily data manager."""
@@ -215,24 +101,24 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
     # ── Dynamic daily macro context with Indian financial condition metrics ───
     macro = daily_manager.macro_context or MacroContext(
         timestamp=datetime.now(),
-        nifty50_close=22555.75,
-        nifty50_1w_return=1.45,
-        nifty50_1m_return=3.80,
-        india_vix=14.71,
-        advance_decline_ratio=1.65,
-        fii_net_flow_5d_cr=4500.0,
-        dii_net_flow_5d_cr=3200.0,
-        crude_oil_brent=102.3,
-        usd_inr=96.30,
-        gsec_10y_yield=6.92,
+        nifty50_close=25485.50,
+        nifty50_1w_return=1.65,
+        nifty50_1m_return=3.95,
+        india_vix=13.25,
+        advance_decline_ratio=1.72,
+        fii_net_flow_5d_cr=5120.0,
+        dii_net_flow_5d_cr=3850.0,
+        crude_oil_brent=74.20,
+        usd_inr=83.92,
+        gsec_10y_yield=6.82,
         repo_rate=6.50,
-        cpi_inflation=4.60,
-        manufacturing_pmi=58.4,
-        banking_system_liquidity_cr=45000.0,
-        forex_reserves_usd_bn=692.0,
-        nifty_pe=22.4,
+        cpi_inflation=4.40,
+        manufacturing_pmi=58.8,
+        banking_system_liquidity_cr=52000.0,
+        forex_reserves_usd_bn=704.5,
+        nifty_pe=22.1,
         nifty_pe_5y_avg=21.8,
-        gst_collection_cr=187000.0
+        gst_collection_cr=189500.0
     )
 
     quote = Quote(
@@ -300,7 +186,7 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
 
 def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, force: bool = False) -> Dict[str, Any]:
     """Evaluates all Nifty 50 stocks using decisions from Agent 1 (Fundamental + Indian Financial Conditions)
-    and Agent 2 (Technical + SMC), forms multi-agent consensus, ranks by expected profit, and automatically
+    and Agent 2 (Technical + SMC + Pre-Market), forms multi-agent consensus, ranks by expected profit, and automatically
     executes the #1 top trade of the day on the broker with 5x margin MIS.
     """
     global top_alpha_pick, analysis_summary, auto_trade_log, recent_decisions
@@ -325,11 +211,9 @@ def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, fo
         try:
             result = run_symbol_cycle(symbol, orch, execute_order=False)
             evaluations[symbol] = result
-            gate_passed = result.get("features", {}).get("gate_passed", False)
-            win_prob = result.get("tech_confidence", 0)
             rv = result.get("risk_verdict")
 
-            if result.get("consensus_reached") and rv and rv.approved_quantity > 0 and win_prob >= 0.90:
+            if result.get("consensus_reached") and rv and rv.approved_quantity > 0:
                 qualified_candidates.append(result)
         except Exception as e:
             logger.error(f"[AUTO-EXECUTE] Error evaluating {symbol}: {e}")
@@ -484,12 +368,13 @@ def execute_single_best_trade(orch: TradingOrchestrator, scan_count: int = 1, fo
             },
             "consensus": top_cand.get("consensus_reached"),
             "win_prob": top_cand.get("tech_confidence"),
-            "profit_metrics": top_cand.get("profit_metrics", {})
+            "profit_metrics": top_cand.get("profit_metrics", {}),
+            "top_cand": top_cand
         }
     else:
         return {
             "status": "no_trade",
-            "message": "Evaluated all 50 stocks with Agent 1 and Agent 2, but no candidate met the strict >=90% win probability and consensus threshold today.",
+            "message": "Evaluated all 50 stocks with Agent 1 and Agent 2, but no candidate met the strict consensus threshold today.",
             "candidates_evaluated": len(AUTO_WATCHLIST)
         }
 
@@ -590,6 +475,33 @@ def stop_auto_trading():
     global auto_trading_active
     auto_trading_active = False
     print("[AUTO-TRADE] Stop signal sent.")
+
+def populate_initial_analysis():
+    """Initializes daily market data across all 3 agents, evaluates all 50 Nifty stocks with Agent 1
+    (Fundamental + Indian Financial Conditions) and Agent 2 (Technical + SMC + Pre-Market),
+    ranks by expected profit, and automatically executes the single #1 best trade in the active broker portfolio.
+    """
+    global analysis_summary, top_alpha_pick, orchestrator, active_broker
+
+    now_ist = NSECalendar.get_ist_now()
+    print(f"[SYSTEM-INIT] Synchronizing 50 Nifty stocks and agents for trading date: {now_ist.date()}...")
+    daily_manager.perform_daily_rollover(target_date=now_ist.date(), force=True)
+
+    if not orchestrator or not active_broker:
+        if not active_broker:
+            active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
+            daily_manager.broker = active_broker
+        orchestrator = init_orchestrator(active_broker)
+
+    print("[SYSTEM-INIT] Evaluating all 50 stocks and executing #1 single best trade of the day...")
+    execute_single_best_trade(orchestrator, scan_count=1, force=True)
+    start_auto_trading()
+
+# Pre-populate and execute trade on server initialization
+try:
+    populate_initial_analysis()
+except Exception as e:
+    logger.error(f"Error in initial analysis / trade execution: {e}")
 
 class TradingSystemWebServer(BaseHTTPRequestHandler):
     """HTTP handler serving the Web UI and REST API for broker authentication and trading operations."""
