@@ -89,7 +89,7 @@ class DailyDataManager:
         # Shared Macro Context & Indian Financial Conditions
         self.macro_context = MacroContext(
             timestamp=now,
-            nifty50_close=25485.50,
+            nifty50_close=25120.00,
             nifty50_1w_return=1.65,
             nifty50_1m_return=3.95,
             india_vix=13.25,
@@ -223,8 +223,8 @@ class DailyDataManager:
         new_yield = round(max(6.50, min(7.60, (self.macro_context.gsec_10y_yield if self.macro_context else 6.92) + yield_drift)), 2)
         liq_drift = 3500.0 if market_bias == "BULLISH" else -4000.0
         new_liq = round((self.macro_context.banking_system_liquidity_cr if self.macro_context else 45000.0) + liq_drift, 0)
-        new_close = 25450.0 + (120.0 if market_bias == "BULLISH" else -90.0)
-        new_pe = round(22.4 * (new_close / 25450.0), 2)
+        new_close = 25120.0 + (120.0 if market_bias == "BULLISH" else -90.0)
+        new_pe = round(22.4 * (new_close / 25120.0), 2)
         new_pmi = 58.6 if market_bias == "BULLISH" else 56.5
         new_cpi = 4.50 if market_bias == "BULLISH" else 4.75
 
@@ -668,7 +668,7 @@ class DailyDataManager:
             "total_pre_market_synced": len(self.daily_pre_market),
             "update_count": self.update_count,
             "macro_snapshot": {
-                "nifty50_close": self.macro_context.nifty50_close if self.macro_context else 25450.0,
+                "nifty50_close": self.macro_context.nifty50_close if self.macro_context else 25120.0,
                 "india_vix": self.macro_context.india_vix if self.macro_context else 13.4,
                 "fii_net_flow_5d_cr": self.macro_context.fii_net_flow_5d_cr if self.macro_context else 4500.0,
                 "dii_net_flow_5d_cr": self.macro_context.dii_net_flow_5d_cr if self.macro_context else 3200.0,

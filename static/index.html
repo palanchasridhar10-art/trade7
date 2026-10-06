@@ -2557,7 +2557,7 @@
 
         const snap = data.macro_snapshot || {};
         document.getElementById('ddmMacroVix').textContent = (snap.india_vix || 13.4).toFixed(2);
-        document.getElementById('ddmMacroAD').textContent = `A/D: ${snap.advance_decline_ratio || 1.65} · Close: ${snap.nifty50_close || 25450}`;
+        document.getElementById('ddmMacroAD').textContent = `A/D: ${snap.advance_decline_ratio || 1.65} · Close: ${snap.nifty50_close || 25120}`;
         document.getElementById('ddmFiiFlow').textContent = (snap.fii_net_flow_5d_cr >= 0 ? '+₹' : '-₹') + Math.abs(snap.fii_net_flow_5d_cr || 4500).toLocaleString() + ' Cr';
         document.getElementById('ddmDiiFlow').textContent = `DII: +₹${(snap.dii_net_flow_5d_cr || 3200).toLocaleString()} Cr`;
 

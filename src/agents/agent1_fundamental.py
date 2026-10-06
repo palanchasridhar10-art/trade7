@@ -575,7 +575,7 @@ class FundamentalAnalystAgent:
         """Compute and return detailed multi-timeframe fundamental metrics for Daily, Monthly, and Yearly."""
         m_ctx = macro or MacroContext(
             timestamp=datetime.now(),
-            nifty50_close=25450.0,
+            nifty50_close=25120.00,
             nifty50_1w_return=1.45,
             nifty50_1m_return=3.80,
             india_vix=13.4,

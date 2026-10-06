@@ -56,7 +56,7 @@ def run_demonstration():
     # Macro Context (Nifty 50, VIX, FII/DII)
     macro = MacroContext(
         timestamp=datetime.now(),
-        nifty50_close=25450.0,
+        nifty50_close=25120.00,
         nifty50_1w_return=1.45,
         nifty50_1m_return=3.80,
         india_vix=13.4,

@@ -101,7 +101,7 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
     # ── Dynamic daily macro context with Indian financial condition metrics ───
     macro = daily_manager.macro_context or MacroContext(
         timestamp=datetime.now(),
-        nifty50_close=25485.50,
+        nifty50_close=25120.00,
         nifty50_1w_return=1.65,
         nifty50_1m_return=3.95,
         india_vix=13.25,

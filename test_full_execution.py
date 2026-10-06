@@ -26,7 +26,7 @@ orch = TradingOrchestrator(agent1=agent1, agent2=agent2, agent3=agent3,
 
 macro = MacroContext(
     timestamp=datetime.now(),
-    nifty50_close=25450.0, nifty50_1w_return=1.45, nifty50_1m_return=3.80,
+    nifty50_close=25120.0, nifty50_1w_return=1.45, nifty50_1m_return=3.80,
     india_vix=13.4, advance_decline_ratio=1.65,
     fii_net_flow_5d_cr=4500.0, dii_net_flow_5d_cr=3200.0,
     crude_oil_brent=74.5, usd_inr=83.85
