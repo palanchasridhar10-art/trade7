@@ -2,7 +2,7 @@
 
 from datetime import datetime
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from src.broker.base import BaseBrokerAdapter
 from src.core.constants import OrderSide, OrderStatus, ProductType, ExitReason
 from src.core.models import Order, Position, PortfolioState, TradeRecord
@@ -298,3 +298,41 @@ class PaperBroker(BaseBrokerAdapter):
             self._close_position(sym, pos.current_price, ExitReason.EOD_MIS, now)
             closed.append(pos)
         return closed
+
+    def get_ltp(self, symbol: str) -> Optional[float]:
+        """Fetch current simulated/market price for symbol in paper broker."""
+        if symbol in self.positions:
+            return self.positions[symbol].current_price
+        from src.data.universe import NIFTY50_UNIVERSE
+        if symbol in NIFTY50_UNIVERSE:
+            return float(NIFTY50_UNIVERSE[symbol].get("price", 1000.0))
+        return None
+
+    def get_market_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Fetch simulated quote data for symbol."""
+        px = self.get_ltp(symbol)
+        if px is None:
+            return None
+        from src.data.universe import NIFTY50_UNIVERSE
+        u = NIFTY50_UNIVERSE.get(symbol, {})
+        return {
+            "symbol": symbol,
+            "price": px,
+            "ltp": px,
+            "open": px * 0.998,
+            "high": px * 1.012,
+            "low": px * 0.991,
+            "close": px,
+            "volume": int(u.get("volume", 2_000_000)),
+            "timestamp": datetime.now().isoformat(),
+            "source": "PAPER_BROKER"
+        }
+
+    def get_all_ltp(self, symbols: List[str]) -> Dict[str, float]:
+        """Fetch real-time LTPs for multiple symbols in paper mode."""
+        prices: Dict[str, float] = {}
+        for sym in symbols:
+            px = self.get_ltp(sym)
+            if px is not None and px > 0:
+                prices[sym] = px
+        return prices

@@ -1,7 +1,7 @@
 """Abstract Broker Adapter Interface for Indian Markets."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from src.core.models import Order, Position, PortfolioState
 
 class BaseBrokerAdapter(ABC):
@@ -45,3 +45,24 @@ class BaseBrokerAdapter(ABC):
     def square_off_all_mis(self, reason: str = "EOD_SQUAREOFF") -> List[Position]:
         """Close out all intraday MIS positions at market price."""
         pass
+
+    @abstractmethod
+    def get_ltp(self, symbol: str) -> Optional[float]:
+        """Fetch real-time Last Traded Price (LTP) directly from the broker."""
+        pass
+
+    def get_market_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Fetch detailed real-time market quote (LTP, OHLC, volume) from the broker."""
+        ltp = self.get_ltp(symbol)
+        if ltp is not None:
+            return {"symbol": symbol, "ltp": ltp, "last_price": ltp}
+        return None
+
+    def get_all_ltp(self, symbols: List[str]) -> Dict[str, float]:
+        """Fetch real-time LTPs for multiple symbols from the broker."""
+        prices: Dict[str, float] = {}
+        for sym in symbols:
+            px = self.get_ltp(sym)
+            if px is not None and px > 0:
+                prices[sym] = px
+        return prices

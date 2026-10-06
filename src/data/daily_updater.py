@@ -687,6 +687,127 @@ class DailyDataManager:
             "recent_rollovers": self.update_history[-5:]
         }
 
+    def update_prices_from_broker(self, broker=None) -> Dict[str, Any]:
+        """Update share prices of all Nifty 50 companies as per active broker (Angel One or PaperBroker).
+        
+        Fetches live LTP / quotes from broker, scales technical EMAs/VWAP and SMC levels,
+        updates quotes and universe, and synchronizes with Agent 1 and Agent 2.
+        """
+        active_b = broker or self.broker
+        if not active_b:
+            return {"status": "ERROR", "message": "No active broker adapter available."}
+
+        now = NSECalendar.get_ist_now()
+        updated_count = 0
+        updated_prices: Dict[str, float] = {}
+
+        for sym, udata in NIFTY50_UNIVERSE.items():
+            broker_quote = None
+            if hasattr(active_b, "get_market_quote"):
+                try:
+                    broker_quote = active_b.get_market_quote(sym)
+                except Exception:
+                    pass
+
+            new_price = None
+            if broker_quote and "price" in broker_quote:
+                new_price = float(broker_quote["price"])
+            elif hasattr(active_b, "get_ltp"):
+                try:
+                    px = active_b.get_ltp(sym)
+                    if px and px > 0:
+                        new_price = float(px)
+                except Exception:
+                    pass
+
+            if new_price and new_price > 0:
+                old_quote = self.daily_quotes.get(sym, {})
+                old_price = float(old_quote.get("price", udata.get("price", 1000.0)))
+                prev_close = float(old_quote.get("previous_close", old_price))
+
+                pct_chg = round(((new_price - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
+
+                # 1. Update quote
+                self.daily_quotes[sym] = {
+                    "price": new_price,
+                    "previous_close": prev_close,
+                    "high": max(new_price, float(broker_quote.get("high", new_price * 1.01)) if broker_quote else new_price * 1.01),
+                    "low": min(new_price, float(broker_quote.get("low", new_price * 0.99)) if broker_quote else new_price * 0.99),
+                    "volume": int(broker_quote.get("volume", old_quote.get("volume", 2_000_000))) if broker_quote else int(old_quote.get("volume", 2_000_000)),
+                    "sector": udata.get("sector", "EQUITY"),
+                    "source": broker_quote.get("source", active_b.__class__.__name__) if broker_quote else active_b.__class__.__name__,
+                    "last_updated": now.isoformat()
+                }
+
+                # 2. Update universe price
+                NIFTY50_UNIVERSE[sym]["price"] = new_price
+
+                # 3. Update fundamentals
+                if sym in self.daily_fundamentals:
+                    self.daily_fundamentals[sym]["pct_change"] = pct_chg
+
+                # 4. Update technical indicators dynamically
+                tp = self.daily_technicals.get(sym, TECHNICAL_PROFILES.get(sym, {}))
+                self.daily_technicals[sym] = {
+                    "adx": tp.get("adx", 25.0),
+                    "rsi14": tp.get("rsi14", 55.0),
+                    "macd_hist": tp.get("macd_hist", 2.0),
+                    "volume_ratio": tp.get("volume_ratio", 1.2),
+                    "vwap_ratio": tp.get("vwap_ratio", 1.005),
+                    "vwap": round(new_price / tp.get("vwap_ratio", 1.005), 2),
+                    "ema20": round(new_price * tp.get("ema20_r", 0.992), 2),
+                    "ema50": round(new_price * tp.get("ema50_r", 0.972), 2),
+                    "ema200": round(new_price * tp.get("ema200_r", 0.920), 2),
+                    "atr14": round(new_price * 0.015, 2),
+                    "ema20_r": tp.get("ema20_r", 0.992),
+                    "ema50_r": tp.get("ema50_r", 0.972),
+                    "ema200_r": tp.get("ema200_r", 0.920)
+                }
+
+                # 5. Update SMC levels dynamically
+                smc = self.daily_smc.get(sym, SMC_PROFILES.get(sym, {}))
+                if smc:
+                    self.daily_smc[sym] = {
+                        "market_structure": smc.get("market_structure", "BULLISH_BOS"),
+                        "swing_high": round(new_price * 1.035, 2),
+                        "swing_low": round(new_price * 0.970, 2),
+                        "liquidity_event": smc.get("liquidity_event", "SSL_SWEPT"),
+                        "bsl_price": round(new_price * 1.038, 2),
+                        "ssl_price": round(new_price * 0.968, 2),
+                        "dealing_range_high": round(new_price * 1.045, 2),
+                        "dealing_range_low": round(new_price * 0.965, 2),
+                        "order_blocks": smc.get("order_blocks", []),
+                        "fair_value_gaps": smc.get("fair_value_gaps", [])
+                    }
+
+                # 6. Update Pre-market IEP price
+                if sym in self.daily_pre_market:
+                    self.daily_pre_market[sym]["iep_price"] = new_price
+                    self.daily_pre_market[sym]["prev_close"] = prev_close
+
+                # 7. If paper broker has open position, update tick
+                if hasattr(active_b, "update_price_tick") and hasattr(active_b, "positions"):
+                    if sym in active_b.positions:
+                        active_b.update_price_tick(sym, new_price)
+
+                updated_prices[sym] = new_price
+                updated_count += 1
+
+        self.last_updated_at = now
+        self._push_data_to_agents()
+
+        broker_name = "Angel One" if "Angel" in active_b.__class__.__name__ else "Paper Broker"
+        logger.info(f"[BROKER-SYNC] Successfully updated prices of {updated_count} shares as per broker {broker_name}.")
+
+        return {
+            "status": "SUCCESS",
+            "broker": broker_name,
+            "broker_type": active_b.__class__.__name__,
+            "symbols_synced": updated_count,
+            "prices": updated_prices,
+            "timestamp": now.isoformat()
+        }
+
     def get_symbol_daily_data(self, symbol: str) -> Dict[str, Any]:
         """Returns consolidated daily multi-agent data for a single symbol."""
         pm = self.get_pre_market_data(symbol)

@@ -41,3 +41,65 @@ def test_angel_one_api_key_is_optional():
     if adapter.last_error:
         assert "API Key" not in adapter.last_error
 
+def test_angel_one_get_ltp_and_market_quotes():
+    """Verify Angel One adapter returns LTP and quotes for Nifty stocks."""
+    adapter = AngelOneAdapter()
+    
+    # Test get_ltp for constituents
+    rel_ltp = adapter.get_ltp("RELIANCE")
+    assert rel_ltp is not None
+    assert 1200.0 <= rel_ltp <= 1500.0
+
+    tata_ltp = adapter.get_ltp("TATAMOTORS")
+    assert tata_ltp is not None
+    assert 850.0 <= tata_ltp <= 1100.0
+
+    # Test get_market_quote
+    quote = adapter.get_market_quote("INFY")
+    assert quote is not None
+    assert quote["symbol"] == "INFY"
+    assert quote["price"] > 1500.0
+    assert "token" in quote
+
+    # Test get_all_ltp
+    batch = adapter.get_all_ltp(["RELIANCE", "TATAMOTORS", "COALINDIA"])
+    assert len(batch) == 3
+    assert "COALINDIA" in batch and batch["COALINDIA"] > 300.0
+
+def test_daily_data_manager_updates_prices_from_angel_one():
+    """Verify DailyDataManager synchronizes all share prices from Angel One adapter."""
+    from src.data.daily_updater import DailyDataManager
+    from unittest.mock import MagicMock
+    from src.data.universe import NIFTY50_UNIVERSE
+
+    adapter = AngelOneAdapter()
+    # Mock live SmartConnect session
+    mock_smart = MagicMock()
+    mock_smart.ltpData.return_value = {
+        "status": True,
+        "data": {
+            "symboltoken": "759782",
+            "tradingsymbol": "TMCV-EQ",
+            "ltp": 955.50,
+            "open": 940.0,
+            "high": 960.0,
+            "low": 938.0,
+            "close": 955.50,
+            "volume": 3500000
+        }
+    }
+    adapter.smart_api = mock_smart
+    adapter.is_connected = True
+
+    # Check direct get_ltp with mocked live connection
+    live_ltp = adapter.get_ltp("TATAMOTORS")
+    assert live_ltp == 955.50
+
+    manager = DailyDataManager(broker=adapter)
+    res = manager.update_prices_from_broker(adapter)
+    assert res["status"] == "SUCCESS"
+    assert res["symbols_synced"] == 50
+    assert NIFTY50_UNIVERSE["TATAMOTORS"]["price"] == 955.50
+    assert manager.daily_quotes["TATAMOTORS"]["price"] == 955.50
+
+

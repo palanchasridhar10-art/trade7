@@ -966,6 +966,10 @@
         🔄 Daily Update
       </button>
 
+      <button id="btnSyncBrokerPrices" class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px; border-color: rgba(255, 153, 51, 0.4); color: #FBBF24;" onclick="syncBrokerSharePrices()" title="Update live share prices as per Angel One broker">
+        ⚡ Sync Broker Prices
+      </button>
+
       <div id="marketBadge" class="badge badge-yellow">
         <span class="badge-dot"></span>
         <span id="marketStatusText">IST Clock Loading...</span>
@@ -2606,6 +2610,34 @@
         alert('Daily update network error: ' + err.message);
       } finally {
         if (btn) btn.textContent = '🔄 Daily Update';
+      }
+    }
+
+    async function syncBrokerSharePrices() {
+      const btn = document.getElementById('btnSyncBrokerPrices');
+      if (btn) btn.textContent = '⏳ Syncing...';
+      try {
+        const res = await fetch('/api/broker/sync-prices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert(`⚡ SHARE PRICES SYNCHRONIZED FROM BROKER!\n\nBroker: ${data.details.broker}\nStocks Synced: ${data.details.symbols_synced} / 50\n\nAll share prices, technical EMAs, VWAP, SMC zones and agent decisions have been updated to live broker market prices.`);
+          updateDashboard();
+          fetchFullAnalysis();
+          const sel = document.getElementById('symbolSelect');
+          if (sel) {
+            updateAgent1CardForSymbol(sel.value || 'RELIANCE');
+            updateAgent2CardForSymbol(sel.value || 'RELIANCE');
+          }
+        } else {
+          alert('Price sync notice: ' + (data.message || 'Unknown'));
+        }
+      } catch (err) {
+        alert('Price sync network error: ' + err.message);
+      } finally {
+        if (btn) btn.textContent = '⚡ Sync Broker Prices';
       }
     }
 

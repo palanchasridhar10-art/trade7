@@ -96,7 +96,16 @@ def run_symbol_cycle(symbol: str, orch: TradingOrchestrator, execute_order: bool
     # ── Company data from universe & daily data manager ───────────────────
     cdata = NIFTY50_UNIVERSE.get(symbol, {})
     qdata = daily_manager.daily_quotes.get(symbol, {})
-    px    = float(qdata.get("price", cdata.get("price", 2000.0)))
+    
+    # Resolve live price as per active broker (Angel One SmartAPI / PaperBroker)
+    broker_px = None
+    if active_broker and hasattr(active_broker, "get_ltp"):
+        try:
+            broker_px = active_broker.get_ltp(symbol)
+        except Exception:
+            pass
+            
+    px = float(broker_px if (broker_px is not None and broker_px > 0) else qdata.get("price", cdata.get("price", 2000.0)))
 
     # ── Dynamic daily macro context with Indian financial condition metrics ───
     macro = daily_manager.macro_context or MacroContext(
@@ -446,6 +455,13 @@ def auto_trading_loop():
                 time.sleep(5)
             continue
 
+        # Update live share prices as per active broker (Angel One / Paper)
+        if active_broker and hasattr(daily_manager, "update_prices_from_broker"):
+            try:
+                daily_manager.update_prices_from_broker(active_broker)
+            except Exception as ex:
+                logger.warning(f"[AUTO-TRADE] Price sync from broker: {ex}")
+
         print(f"[AUTO-TRADE] Scan #{scan_count} — evaluating all {len(AUTO_WATCHLIST)} symbols with Agent 1 and Agent 2 to pick the #1 most profitable trade of the day...")
         res = execute_single_best_trade(orchestrator, scan_count=scan_count)
         trades_placed = 1 if res.get("status") == "success" else 0
@@ -696,8 +712,41 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 is_broker_connected = True
                 orchestrator = init_orchestrator(active_broker)
 
-            res = execute_single_best_trade(orchestrator, scan_count=1, force=False)
-            self._send_json(200, res)
+        elif self.path == "/api/broker/prices" or self.path == "/api/broker-prices":
+            if active_broker and hasattr(daily_manager, "update_prices_from_broker"):
+                sync_res = daily_manager.update_prices_from_broker(active_broker)
+                self._send_json(200, sync_res)
+            else:
+                self._send_json(200, {
+                    "status": "SUCCESS",
+                    "broker": active_mode or "None",
+                    "prices": {s: u.get("price", 0) for s, u in NIFTY50_UNIVERSE.items()}
+                })
+
+        elif self.path.startswith("/api/broker/quote") or self.path.startswith("/api/quote"):
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            sym = params.get("symbol", [None])[0]
+            if not sym and len(parsed.path.split("/")) > 3:
+                sym = parsed.path.split("/")[-1]
+
+            if sym:
+                sym_clean = sym.upper().strip()
+                if active_broker and hasattr(active_broker, "get_market_quote"):
+                    q = active_broker.get_market_quote(sym_clean)
+                    if q:
+                        self._send_json(200, q)
+                        return
+                u = NIFTY50_UNIVERSE.get(sym_clean, {})
+                self._send_json(200, {
+                    "symbol": sym_clean,
+                    "price": u.get("price", 0.0),
+                    "ltp": u.get("price", 0.0),
+                    "source": "UNIVERSE"
+                })
+            else:
+                self._send_json(400, {"error": "Missing symbol parameter"})
 
         else:
             self._send_json(404, {"error": "Not Found"})
@@ -750,11 +799,19 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                     active_mode = "live"
                     is_broker_connected = True
                     orchestrator = init_orchestrator(adapter)
+                    
+                    # Update share prices directly from Angel One broker
+                    try:
+                        sync_res = daily_manager.update_prices_from_broker(adapter)
+                        print(f"[SmartAPI] Synced {sync_res.get('symbols_synced')} live share prices directly from Angel One broker.")
+                    except Exception as e:
+                        logger.error(f"[SmartAPI] Error syncing live prices from Angel One: {e}")
+
                     # AUTO-TRADE: Start autonomous trading immediately on connection
                     start_auto_trading()
                     self._send_json(200, {
                         "status": "success",
-                        "message": f"Connected to Angel One ({client_code})! Autonomous trading loop STARTED — scanning {len(AUTO_WATCHLIST)} symbols every {AUTO_SCAN_INTERVAL_SECONDS}s.",
+                        "message": f"Connected to Angel One ({client_code})! Live share prices updated from broker and trading loop STARTED.",
                         "client_code": client_code,
                         "mode": "live",
                         "auto_trading": True,
@@ -945,6 +1002,21 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "daily_status": daily_manager.get_status(),
                 "top_alpha_pick": top_alpha_pick
             })
+
+        elif self.path in ["/api/broker/sync-prices", "/api/sync-broker-prices"]:
+            if not active_broker:
+                self._send_json(400, {"status": "error", "message": "No active broker session to sync prices from."})
+                return
+
+            try:
+                sync_res = daily_manager.update_prices_from_broker(active_broker)
+                self._send_json(200, {
+                    "status": "success",
+                    "message": f"Successfully updated {sync_res.get('symbols_synced', 0)} share prices as per broker {sync_res.get('broker')}!",
+                    "details": sync_res
+                })
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": f"Error updating share prices from broker: {e}"})
 
         elif self.path == "/api/auto-execute":
             if not is_broker_connected or not orchestrator:
