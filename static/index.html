@@ -354,6 +354,97 @@
     .pill-red { background: rgba(239, 68, 68, 0.15); color: #F87171; }
     .pill-gray { background: rgba(148, 163, 184, 0.15); color: #94A3B8; }
 
+    /* Top View Navigation Bar */
+    .view-nav-bar {
+      display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px; flex-wrap: wrap;
+    }
+    .view-nav-btn {
+      background: rgba(14, 20, 34, 0.7); border: 1px solid var(--border-subtle);
+      color: var(--text-muted); padding: 10px 22px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s ease; font-family: var(--font-ui);
+    }
+    .view-nav-btn:hover {
+      background: rgba(26, 35, 54, 0.9); color: #fff; border-color: rgba(255, 255, 255, 0.2);
+    }
+    .view-nav-btn.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(59, 130, 246, 0.15));
+      border-color: var(--accent-cyan); color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+    }
+
+    /* Analysis Hub Styles */
+    .analysis-section { margin-bottom: 28px; }
+    .analysis-header-card {
+      background: linear-gradient(135deg, rgba(14, 20, 34, 0.95) 0%, rgba(20, 30, 50, 0.85) 100%);
+      border: 1px solid rgba(0, 240, 255, 0.3); border-radius: var(--radius-md);
+      padding: 20px 24px; margin-bottom: 24px; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    .dealing-range-bar-box {
+      background: rgba(10, 14, 24, 0.8); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 18px 22px; margin-top: 14px;
+    }
+    .range-bar-track {
+      height: 14px; border-radius: 7px; background: linear-gradient(90deg, #10B981 0%, #3B82F6 50%, #EF4444 100%);
+      position: relative; margin: 28px 0 16px 0;
+    }
+    .range-pointer {
+      position: absolute; top: -8px; width: 4px; height: 30px; background: #FFF;
+      box-shadow: 0 0 10px #00F0FF, 0 0 20px #FFF; border-radius: 2px;
+      transform: translateX(-50%);
+    }
+    .range-pointer-label {
+      position: absolute; top: -26px; transform: translateX(-50%);
+      background: #00F0FF; color: #080B10; font-size: 10px; font-weight: 800;
+      padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); white-space: nowrap;
+    }
+
+    /* Heatmap Grid */
+    .heatmap-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px; margin-top: 14px;
+    }
+    .heatmap-card {
+      background: rgba(14, 20, 34, 0.85); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm); padding: 12px; cursor: pointer;
+      transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .heatmap-card:hover {
+      transform: translateY(-3px); border-color: var(--accent-cyan);
+      box-shadow: 0 4px 18px rgba(0, 240, 255, 0.2);
+    }
+    .heatmap-bullish { border-left: 3px solid var(--accent-green); background: rgba(16, 185, 129, 0.08); }
+    .heatmap-bearish { border-left: 3px solid var(--accent-red); background: rgba(239, 68, 68, 0.08); }
+    .heatmap-neutral { border-left: 3px solid #64748B; background: rgba(100, 116, 139, 0.06); }
+
+    /* Flow Chart Nodes */
+    .flowchart-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px; margin-top: 14px;
+    }
+    .flow-node {
+      background: rgba(14, 20, 34, 0.9); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 16px; position: relative;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .flow-node-passed { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.04); }
+    .flow-node-active { border-color: rgba(0, 240, 255, 0.5); box-shadow: 0 0 16px rgba(0, 240, 255, 0.15); }
+    .flow-step-number {
+      font-size: 10px; font-family: var(--font-mono); color: var(--accent-cyan);
+      font-weight: 700; text-transform: uppercase;
+    }
+    .flow-title { font-size: 13px; font-weight: 700; color: #FFF; display: flex; align-items: center; gap: 6px; }
+
+    /* Limit Orders Ladder */
+    .limit-order-card {
+      background: linear-gradient(135deg, rgba(14, 20, 34, 0.95), rgba(20, 26, 42, 0.9));
+      border: 1px solid rgba(0, 240, 255, 0.25); border-radius: var(--radius-md);
+      padding: 18px 22px; margin-bottom: 14px;
+    }
+
     footer {
       border-top: 1px solid var(--border-subtle); padding: 16px 28px;
       text-align: center; font-size: 12px; color: var(--text-dim); font-family: var(--font-mono);
@@ -996,8 +1087,20 @@
 
   <!-- Main Dashboard -->
   <main>
-    <!-- Top Metric Cards -->
-    <div class="grid-metrics">
+    <!-- View Switcher Tabs -->
+    <div class="view-nav-bar">
+      <button id="navBtnDashboard" class="view-nav-btn active" onclick="switchMainView('dashboard')">
+        <span>⚡</span> Trading Dashboard
+      </button>
+      <button id="navBtnAnalysis" class="view-nav-btn" onclick="switchMainView('analysis')">
+        <span>🏛️</span> Institutional Analysis Block (SMC · FVG · OB · IFCI · Heatmap · Liquidity · Flow Chart · Limit Orders)
+      </button>
+    </div>
+
+    <!-- Active Trading Dashboard View -->
+    <div id="dashboardView">
+      <!-- Top Metric Cards -->
+      <div class="grid-metrics">
       <div class="metric-card">
         <div class="metric-label">Total Portfolio Capital</div>
         <div class="metric-value" id="valTotalCapital">₹10,00,000.00</div>
@@ -1489,6 +1592,293 @@
           </tr>
         </tbody>
       </table>
+    </div>
+    </div><!-- /#dashboardView -->
+
+    <!-- Dedicated Institutional Analysis Block -->
+    <div id="analysisBlock" style="display:none;">
+      <!-- Analysis Header Bar -->
+      <div class="analysis-header-card">
+        <div>
+          <div style="font-size:11px; color:var(--accent-cyan); font-family:var(--font-mono); font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+            🏛️ Institutional Quantitative Analysis Engine
+          </div>
+          <h2 style="font-size:22px; font-weight:800; color:#FFF; margin:0;">
+            NIFTY 50 Deep Chart & Institutional Market Analysis
+          </h2>
+          <p style="font-size:12px; color:var(--text-muted); margin:4px 0 0 0;">
+            Smart Money Concepts (SMC) · Fair Value Gaps (FVG) · Order Blocks · Indian Macro (IFCI) · Sector Heat Map · Liquidity Radar · Decision Flowchart · Limit Orders
+          </p>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">INSPECT ASSET:</label>
+            <select id="analysisSymbolSelect" class="watchlist-select" onchange="onAnalysisSymbolChange(this.value)" style="padding:8px 14px; font-weight:700; border-color:rgba(0,240,255,0.4); color:var(--accent-cyan);">
+              <option value="NIFTY">NIFTY 50 Benchmark Index</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="refreshAnalysisData()" style="padding:8px 16px;">
+            🔄 Refresh Analysis
+          </button>
+          <button class="btn btn-success" onclick="triggerAutoExecute()" style="padding:8px 16px; background:linear-gradient(135deg, #10B981, #059669); border-color:#34D399; font-weight:700;">
+            ⚡ Auto-Execute Top Pick
+          </button>
+        </div>
+      </div>
+
+      <!-- 1. NIFTY 50 & ASSET SMART MONEY CONCEPTS (SMC) CHART STRUCTURE -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>🏛️ 1. Smart Money Concepts (SMC) & Dealing Range Structure</span>
+          <span id="analysisStructureBadge" class="badge-pill pill-green" style="font-size:12px; padding:4px 10px;">BULLISH_BOS</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+          <!-- Price & Structure Stat Card -->
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label" id="analysisAssetLabel">Current Asset Price</div>
+            <div class="metric-value" id="analysisCurrentPrice" style="color:var(--accent-cyan);">₹25,120.00</div>
+            <div class="metric-sub" id="analysisDayRangeText">Day High: ₹25,185.50 | Day Low: ₹24,980.20 (+0.55%)</div>
+          </div>
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">Market Structure & Swings</div>
+            <div class="metric-value" id="analysisSwingText" style="font-size:18px; color:#FFF;">SH: ₹25,320 | SL: ₹24,860</div>
+            <div class="metric-sub" id="analysisStructureDesc">Bullish Break of Structure (BOS) Confirmed</div>
+          </div>
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">Liquidity Pools & Sweep Status</div>
+            <div class="metric-value" id="analysisLiquidityEvent" style="font-size:18px; color:var(--accent-blue);">SSL_SWEPT (Reclaimed)</div>
+            <div class="metric-sub" id="analysisBslSslText">BSL: ₹25,350.00 | SSL: ₹24,820.00</div>
+          </div>
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">Dealing Range Pricing Zone</div>
+            <div class="metric-value" id="analysisDealingZone" style="font-size:18px; color:var(--accent-green);">DISCOUNT / EQUILIBRIUM (50.8%)</div>
+            <div class="metric-sub">Range: ₹24,750 (Low) to ₹25,480 (High)</div>
+          </div>
+        </div>
+
+        <!-- Dealing Range Visual Bar -->
+        <div class="dealing-range-bar-box">
+          <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono); color:var(--text-muted);">
+            <span>🟢 DISCOUNT ZONE (<50% Optimal Institutional Accumulation)</span>
+            <span>⚖️ EQUILIBRIUM (50.0%)</span>
+            <span>🔴 PREMIUM ZONE (>50% Institutional Distribution)</span>
+          </div>
+          <div class="range-bar-track">
+            <div id="analysisRangePointer" class="range-pointer" style="left: 50.8%;">
+              <div id="analysisPointerLabel" class="range-pointer-label">₹25,120 (50.8%)</div>
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono); color:var(--text-dim);">
+            <span id="analysisRangeLowLabel">Range Low: ₹24,750.00</span>
+            <span id="analysisEquilibriumLabel">Equilibrium: ₹25,115.00</span>
+            <span id="analysisRangeHighLabel">Range High: ₹25,480.00</span>
+          </div>
+        </div>
+
+        <!-- Institutional Narrative Summary -->
+        <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); border-radius:var(--radius-md); padding:14px 18px; margin-top:14px;">
+          <div style="font-size:11px; font-weight:700; color:var(--accent-green); text-transform:uppercase; margin-bottom:4px;">🏛️ Institutional Smart Money Narrative:</div>
+          <div id="analysisNarrativeText" style="font-size:13px; color:var(--text-main); line-height:1.5;">
+            Smart money swept Sell-Side Liquidity (SSL) below swing lows, triggering a Bullish Break of Structure (BOS). Dealing range equilibrium is at 50.8% with institutional buying demand defending the BISI Fair Value Gap.
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. FAIR VALUE GAPS (FVG) & ORDER BLOCKS (OB) INTELLIGENCE MATRIX -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>📦 2. Fair Value Gaps (FVG) & Institutional Order Blocks (OB)</span>
+          <span style="font-size:11px; color:var(--accent-cyan); font-family:var(--font-mono);">Unmitigated Inefficiencies & Volume Displacement</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+          <!-- Order Blocks Card -->
+          <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px;">
+            <div style="font-size:13px; font-weight:700; color:var(--accent-cyan); margin-bottom:12px; display:flex; justify-content:space-between;">
+              <span>🏛️ Institutional Order Blocks (OB)</span>
+              <span class="badge-pill pill-green">UNMITIGATED</span>
+            </div>
+            <div id="analysisObContainer" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- OB rows rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Fair Value Gaps Card -->
+          <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px;">
+            <div style="font-size:13px; font-weight:700; color:var(--accent-blue); margin-bottom:12px; display:flex; justify-content:space-between;">
+              <span>⚡ Fair Value Gaps (FVG / BISI / SIBI)</span>
+              <span class="badge-pill pill-blue">PRICE INEFFICIENCIES</span>
+            </div>
+            <div id="analysisFvgContainer" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- FVG rows rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. PRESENT FINANCIAL STOCK MARKET CONDITIONS (IFCI MACRO) -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>🇮🇳 3. Present Financial Stock Market Conditions (Indian Financial Conditions Index - IFCI)</span>
+          <span id="analysisIfciStatusBadge" class="badge-pill pill-green" style="font-size:12px; padding:4px 12px;">EXPANSIONARY · 78.5/100</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:14px;">
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">10Y G-Sec Yield</div>
+            <div class="metric-value" id="analysisIfciGsec" style="font-size:18px; color:var(--accent-cyan);">6.82%</div>
+            <div class="metric-sub">Sovereign Benchmark (≤7.1% Bullish)</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">RBI Repo Rate</div>
+            <div class="metric-value" id="analysisIfciRepo" style="font-size:18px; color:#FFF;">6.50%</div>
+            <div class="metric-sub">Neutral Monetary Stance</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">Banking Liquidity</div>
+            <div class="metric-value" id="analysisIfciLiquidity" style="font-size:18px; color:var(--accent-green);">+₹52,000 Cr</div>
+            <div class="metric-sub">Surplus Net LAF</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">Manufacturing PMI</div>
+            <div class="metric-value" id="analysisIfciPmi" style="font-size:18px; color:var(--accent-green);">58.8</div>
+            <div class="metric-sub">High Growth (>50 Expansion)</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">Retail CPI Inflation</div>
+            <div class="metric-value" id="analysisIfciCpi" style="font-size:18px; color:var(--accent-cyan);">4.40%</div>
+            <div class="metric-sub">4±2% Tolerance Target</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">Monthly GST Revenue</div>
+            <div class="metric-value" id="analysisIfciGst" style="font-size:18px; color:#FFF;">₹1.89L Cr</div>
+            <div class="metric-sub">Robust Indirect Tax Receipts</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">Nifty 50 Trailing PE</div>
+            <div class="metric-value" id="analysisIfciPe" style="font-size:18px; color:var(--accent-yellow);">22.1x</div>
+            <div class="metric-sub">5Y Avg: 21.8x · Fair Value</div>
+          </div>
+          <div class="metric-card" style="padding:14px;">
+            <div class="metric-label">India VIX & A/D Ratio</div>
+            <div class="metric-value" id="analysisIfciVix" style="font-size:18px; color:var(--accent-green);">13.25 | 1.72</div>
+            <div class="metric-sub">Low Volatility Breadth</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(14,20,34,0.85); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:12px 18px; font-size:11px; color:var(--text-muted); font-family:var(--font-mono);" id="analysisIfciReasons">
+          Macro Drivers: Sovereign yield easing expands multiples · Surplus banking liquidity supports institutional buying · Low VIX indicates healthy risk appetite.
+        </div>
+      </div>
+
+      <!-- 4. NIFTY 50 CONSTITUENT SECTOR & STOCK HEAT MAP -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>🔥 4. NIFTY 50 Constituent Stock & Sector Heat Map</span>
+          <span style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">Real-Time % Move · Volume Surge · SMC Bias</span>
+        </div>
+
+        <!-- Sector Filter Tabs -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;" id="heatmapFilterButtons">
+          <button class="badge badge-green" style="cursor:pointer;" onclick="filterHeatmap('ALL')">ALL (50)</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('Banking')">Banking</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('Energy')">Energy</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('IT')">IT</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('Auto')">Auto</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('Metals')">Metals</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('FMCG')">FMCG</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('Pharma')">Pharma</button>
+          <button class="badge" style="cursor:pointer;" onclick="filterHeatmap('Consumer')">Consumer</button>
+        </div>
+
+        <!-- Sector Aggregate Summary Cards -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:14px;" id="analysisSectorCards">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- 50 Stocks Heatmap Grid -->
+        <div class="heatmap-grid" id="analysisHeatmapGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- 5. LIQUIDITY POOLS & ORDER FLOW TAPE RADAR -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>💧 5. Liquidity Pools & Institutional Order Flow Radar</span>
+          <span style="font-size:11px; color:var(--accent-blue); font-family:var(--font-mono);">BSL/SSL Pools · Cumulative Volume Delta (CVD) · Block Flows</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">Buy-Side Liquidity (BSL) Level</div>
+            <div class="metric-value" id="analysisBslPrice" style="color:var(--accent-red);">₹25,350.00</div>
+            <div class="metric-sub" id="analysisBslSweptCount">BSL Swept Stocks: 7 / 50</div>
+          </div>
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">Sell-Side Liquidity (SSL) Level</div>
+            <div class="metric-value" id="analysisSslPrice" style="color:var(--accent-green);">₹24,820.00</div>
+            <div class="metric-sub" id="analysisSslSweptCount">SSL Swept Stocks: 38 / 50 (Accumulation)</div>
+          </div>
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">Universe Net Cumulative Delta (CVD)</div>
+            <div class="metric-value" id="analysisUniverseCvd" style="color:var(--accent-green);">+14,250,000 Shs</div>
+            <div class="metric-sub">Order Book Pressure: Net Institutional Absorption</div>
+          </div>
+          <div class="metric-card" style="padding:18px;">
+            <div class="metric-label">FII & DII 5-Day Cash Flow</div>
+            <div class="metric-value" id="analysisFiiDiiCash" style="color:var(--accent-green);">+₹8,970 Cr Net</div>
+            <div class="metric-sub">FII: +₹5,120 Cr | DII: +₹3,850 Cr</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. INTERACTIVE STRATEGY DECISION FLOW CHART -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>🧭 6. Multi-Agent Verification & Strategy Decision Flow Chart</span>
+          <span style="font-size:11px; color:var(--accent-cyan); font-family:var(--font-mono);">8-Stage Autonomous Pipeline Architecture</span>
+        </div>
+
+        <div class="flowchart-row" id="analysisFlowchartContainer">
+          <!-- Flowchart nodes rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- 7. REAL-TIME LIMIT ORDERS PRICE LADDER & BRACKET DISPLAY -->
+      <div class="analysis-section">
+        <div class="section-title">
+          <span>🎯 7. Real-Time Limit Orders Price Ladder & Bracket Display</span>
+          <span class="badge-pill pill-green">5x MARGIN MIS · 5% STOP · 18% TARGET</span>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Symbol & Sector</th>
+                <th>Order Side</th>
+                <th>Limit Entry (₹)</th>
+                <th>Limit Stop Loss (5%)</th>
+                <th>Limit Target (18%)</th>
+                <th>Trailing Stop Trigger (+8%)</th>
+                <th>Allocated Value (90%)</th>
+                <th>5x Margin (20%)</th>
+                <th>Quantity</th>
+                <th>R:R Ratio</th>
+                <th>Expected Profit (₹)</th>
+                <th>Max Risk (₹)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="analysisLimitOrdersBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -2693,11 +3083,451 @@
       }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Institutional Analysis Block & View Management
+    // ─────────────────────────────────────────────────────────────────────────
+    let currentMainView = 'dashboard';
+    let currentAnalysisSymbol = 'NIFTY';
+    let currentHeatmapFilter = 'ALL';
+    let cachedDeepAnalysisData = null;
+
+    function switchMainView(viewName) {
+      currentMainView = viewName;
+      const dbView = document.getElementById('dashboardView');
+      const anBlock = document.getElementById('analysisBlock');
+      const btnDb = document.getElementById('navBtnDashboard');
+      const btnAn = document.getElementById('navBtnAnalysis');
+
+      if (viewName === 'analysis') {
+        if (dbView) dbView.style.display = 'none';
+        if (anBlock) anBlock.style.display = 'block';
+        if (btnDb) btnDb.classList.remove('active');
+        if (btnAn) btnAn.classList.add('active');
+        refreshAnalysisData();
+      } else {
+        if (dbView) dbView.style.display = 'block';
+        if (anBlock) anBlock.style.display = 'none';
+        if (btnDb) btnDb.classList.add('active');
+        if (btnAn) btnAn.classList.remove('active');
+      }
+    }
+
+    function onAnalysisSymbolChange(symbol) {
+      currentAnalysisSymbol = symbol;
+      refreshAnalysisData();
+    }
+
+    function filterHeatmap(sector) {
+      currentHeatmapFilter = sector;
+      const btns = document.querySelectorAll('#heatmapFilterButtons button');
+      btns.forEach(b => {
+        if (b.textContent.includes(sector) || (sector === 'ALL' && b.textContent.includes('ALL'))) {
+          b.className = 'badge badge-green';
+        } else {
+          b.className = 'badge';
+        }
+      });
+      if (cachedDeepAnalysisData) {
+        renderAnalysisHeatmap(cachedDeepAnalysisData, sector);
+      }
+    }
+
+    function inspectStockFromHeatmap(symbol) {
+      currentAnalysisSymbol = symbol;
+      const sel = document.getElementById('analysisSymbolSelect');
+      if (sel) sel.value = symbol;
+      refreshAnalysisData();
+      const topSection = document.getElementById('analysisBlock');
+      if (topSection) {
+        topSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    async function refreshAnalysisData() {
+      try {
+        const res = await fetch(`/api/nifty/analysis?symbol=${encodeURIComponent(currentAnalysisSymbol)}`);
+        const data = await res.json();
+        if (data.status !== 'success') return;
+        cachedDeepAnalysisData = data;
+
+        // Populate symbol dropdown if needed
+        const sel = document.getElementById('analysisSymbolSelect');
+        if (sel && sel.options.length <= 1 && data.heatmap && data.heatmap.length > 0) {
+          sel.innerHTML = '<option value="NIFTY">🏛️ NIFTY 50 Benchmark Index</option>' +
+            data.heatmap.map(h => `<option value="${h.symbol}">${h.symbol} (${h.sector})</option>`).join('');
+          sel.value = currentAnalysisSymbol;
+        }
+
+        renderAnalysisSMC(data);
+        renderAnalysisFVGandOB(data);
+        renderAnalysisIFCI(data);
+        renderAnalysisHeatmap(data, currentHeatmapFilter);
+        renderAnalysisLiquidity(data);
+        renderAnalysisFlowchart(data);
+        renderAnalysisLimitOrders(data);
+      } catch (err) {
+        console.error('Error fetching Nifty Deep Analysis data:', err);
+      }
+    }
+
+    function renderAnalysisSMC(data) {
+      const isNifty = (currentAnalysisSymbol === 'NIFTY' || currentAnalysisSymbol === 'INDEX');
+      const smc = isNifty ? data.nifty_chart_smc : (data.focus_stock_smc || data.nifty_chart_smc);
+      if (!smc) return;
+
+      const symName = smc.symbol || smc.index_name || currentAnalysisSymbol;
+      const px = smc.current_price || smc.price || 0;
+      const high = smc.day_high || (px * 1.004);
+      const low = smc.day_low || (px * 0.994);
+      const chg = smc.change_pct !== undefined ? smc.change_pct : (smc.day_change_pct || 0.0);
+      const struct = smc.market_structure || 'BULLISH_BOS';
+      const liqEvent = smc.liquidity_event || 'SSL_SWEPT';
+      const bsl = smc.bsl_price || (px * 1.02);
+      const ssl = smc.ssl_price || (px * 0.98);
+      const zone = smc.dealing_range_zone || 'EQUILIBRIUM';
+      const zonePct = smc.dealing_range_pct !== undefined ? smc.dealing_range_pct : 50.8;
+      const rHigh = smc.dealing_range_high || smc.range_high || (px * 1.025);
+      const rLow = smc.dealing_range_low || smc.range_low || (px * 0.975);
+      const eq = smc.equilibrium_price || ((rHigh + rLow) / 2);
+
+      const elLabel = document.getElementById('analysisAssetLabel');
+      if (elLabel) elLabel.textContent = `${symName} Spot Price`;
+
+      const elPx = document.getElementById('analysisCurrentPrice');
+      if (elPx) elPx.textContent = `₹${px.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      const elDayRange = document.getElementById('analysisDayRangeText');
+      if (elDayRange) elDayRange.textContent = `Day High: ₹${high.toLocaleString('en-IN', {minimumFractionDigits: 2})} | Day Low: ₹${low.toLocaleString('en-IN', {minimumFractionDigits: 2})} (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%)`;
+
+      const elBadge = document.getElementById('analysisStructureBadge');
+      if (elBadge) {
+        elBadge.textContent = struct;
+        elBadge.className = `badge-pill ${struct.includes('BULLISH') ? 'pill-green' : (struct.includes('BEARISH') ? 'pill-red' : 'pill-yellow')}`;
+      }
+
+      const elSwing = document.getElementById('analysisSwingText');
+      if (elSwing) elSwing.textContent = `SH: ₹${(smc.swing_high || (px * 1.018)).toLocaleString('en-IN', {minimumFractionDigits: 2})} | SL: ₹${(smc.swing_low || (px * 0.982)).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const elStructDesc = document.getElementById('analysisStructureDesc');
+      if (elStructDesc) elStructDesc.textContent = smc.structure_desc || (struct.includes('BULLISH') ? 'Bullish Break of Structure (BOS) Confirmed' : 'Market Structure Verified');
+
+      const elLiq = document.getElementById('analysisLiquidityEvent');
+      if (elLiq) {
+        elLiq.textContent = `${liqEvent} (Swept & Reclaimed)`;
+        elLiq.style.color = liqEvent.includes('SSL') ? 'var(--accent-green)' : (liqEvent.includes('BSL') ? 'var(--accent-red)' : 'var(--accent-blue)');
+      }
+
+      const elBslSsl = document.getElementById('analysisBslSslText');
+      if (elBslSsl) elBslSsl.textContent = `BSL: ₹${bsl.toLocaleString('en-IN', {minimumFractionDigits: 2})} | SSL: ₹${ssl.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const elZone = document.getElementById('analysisDealingZone');
+      if (elZone) {
+        elZone.textContent = `${zone} (${zonePct.toFixed(1)}%)`;
+        elZone.style.color = zone === 'DISCOUNT' ? 'var(--accent-green)' : (zone === 'PREMIUM' ? 'var(--accent-red)' : 'var(--accent-yellow)');
+      }
+
+      // Range Bar Pointer
+      const ptr = document.getElementById('analysisRangePointer');
+      if (ptr) ptr.style.left = `${Math.min(98, Math.max(2, zonePct))}%`;
+
+      const ptrLabel = document.getElementById('analysisPointerLabel');
+      if (ptrLabel) ptrLabel.textContent = `₹${px.toLocaleString('en-IN', {maximumFractionDigits: 0})} (${zonePct.toFixed(1)}%)`;
+
+      const lblLow = document.getElementById('analysisRangeLowLabel');
+      if (lblLow) lblLow.textContent = `Range Low (0%): ₹${rLow.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const lblEq = document.getElementById('analysisEquilibriumLabel');
+      if (lblEq) lblEq.textContent = `⚖️ Equilibrium (50%): ₹${eq.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const lblHigh = document.getElementById('analysisRangeHighLabel');
+      if (lblHigh) lblHigh.textContent = `Range High (100%): ₹${rHigh.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const elNarr = document.getElementById('analysisNarrativeText');
+      if (elNarr) elNarr.textContent = smc.institutional_narrative || `Smart money swept liquidity below swing lows, triggering a ${struct}. Dealing range is at ${zonePct.toFixed(1)}% with institutional buying demand active.`;
+    }
+
+    function renderAnalysisFVGandOB(data) {
+      const isNifty = (currentAnalysisSymbol === 'NIFTY' || currentAnalysisSymbol === 'INDEX');
+      const smc = isNifty ? data.nifty_chart_smc : (data.focus_stock_smc || data.nifty_chart_smc);
+      if (!smc) return;
+
+      const obContainer = document.getElementById('analysisObContainer');
+      if (obContainer && smc.order_blocks) {
+        obContainer.innerHTML = smc.order_blocks.map(ob => {
+          const isBull = (ob.type || ob.ob_type) === 'BULLISH_OB';
+          const top = ob.top || ob.top_price || 0;
+          const bottom = ob.bottom || ob.bottom_price || 0;
+          const disp = ob.displacement || ob.volume_displacement || 1.8;
+          return `<div style="background:rgba(255,255,255,0.03); border:1px solid ${isBull ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}; border-radius:var(--radius-sm); padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <span class="badge-pill ${isBull ? 'pill-green' : 'pill-red'}" style="font-weight:700;">${isBull ? '🟢 BULLISH OB (DEMAND)' : '🔴 BEARISH OB (SUPPLY)'}</span>
+                <span style="font-size:11px; font-family:var(--font-mono); color:var(--text-muted);">${ob.status || 'UNMITIGATED_SUPPORT'}</span>
+              </div>
+              <div style="font-size:12px; font-family:var(--font-mono); color:#FFF;">
+                Zone: <strong style="color:var(--accent-cyan);">₹${bottom.toLocaleString('en-IN', {minimumFractionDigits:2})}</strong> - <strong style="color:var(--accent-cyan);">₹${top.toLocaleString('en-IN', {minimumFractionDigits:2})}</strong>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px; font-weight:700; color:${isBull ? 'var(--accent-green)' : 'var(--accent-red)'}; font-family:var(--font-mono);">${disp.toFixed(2)}x Vol</div>
+              <div style="font-size:10px; color:var(--text-dim);">Displacement</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      const fvgContainer = document.getElementById('analysisFvgContainer');
+      if (fvgContainer && (smc.fvgs || smc.fair_value_gaps)) {
+        const fvgs = smc.fvgs || smc.fair_value_gaps;
+        fvgContainer.innerHTML = fvgs.map(fvg => {
+          const isBisi = (fvg.type || fvg.fvg_type) === 'BISI';
+          const top = fvg.top || fvg.top_price || 0;
+          const bottom = fvg.bottom || fvg.bottom_price || 0;
+          const ce = fvg.ce || fvg.consequent_encroachment || ((top + bottom) / 2);
+          return `<div style="background:rgba(255,255,255,0.03); border:1px solid ${isBisi ? 'rgba(0,240,255,0.3)' : 'rgba(139,92,246,0.3)'}; border-radius:var(--radius-sm); padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <span class="badge-pill ${isBisi ? 'pill-blue' : 'pill-gray'}" style="font-weight:700;">${isBisi ? '⚡ BISI (Buy-Side Imbalance)' : '⚡ SIBI (Sell-Side Imbalance)'}</span>
+                <span style="font-size:11px; font-family:var(--font-mono); color:var(--text-muted);">${fvg.status || 'ACTIVE'}</span>
+              </div>
+              <div style="font-size:12px; font-family:var(--font-mono); color:#FFF;">
+                Gap: <strong style="color:var(--accent-cyan);">₹${bottom.toLocaleString('en-IN', {minimumFractionDigits:2})}</strong> - <strong style="color:var(--accent-cyan);">₹${top.toLocaleString('en-IN', {minimumFractionDigits:2})}</strong>
+              </div>
+              <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">
+                50% Consequent Encroachment (CE): <span style="color:var(--accent-yellow); font-family:var(--font-mono);">₹${ce.toLocaleString('en-IN', {minimumFractionDigits:2})}</span>
+              </div>
+            </div>
+            <div style="text-align:right; max-width:180px;">
+              <div style="font-size:10px; color:var(--text-muted); line-height:1.3;">${fvg.description || (isBisi ? 'Institutional Discount Zone' : 'Premium Liquidity Target')}</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    function renderAnalysisIFCI(data) {
+      const ifci = data.financial_market_conditions || {};
+      const ind = ifci.indicators || {};
+
+      const b = document.getElementById('analysisIfciStatusBadge');
+      if (b) {
+        const st = ifci.ifci_status || 'EXPANSIONARY';
+        const sc = (ifci.ifci_score || 78.5).toFixed(1);
+        b.textContent = `${st} · ${sc}/100`;
+        b.className = `badge-pill ${st === 'EXPANSIONARY' ? 'pill-green' : (st === 'RESTRICTIVE' ? 'pill-red' : 'pill-blue')}`;
+      }
+
+      const elGsec = document.getElementById('analysisIfciGsec');
+      if (elGsec) elGsec.textContent = `${(ind.gsec_10y_yield || 6.82).toFixed(2)}%`;
+
+      const elRepo = document.getElementById('analysisIfciRepo');
+      if (elRepo) elRepo.textContent = `${(ind.repo_rate || 6.50).toFixed(2)}%`;
+
+      const elLiq = document.getElementById('analysisIfciLiquidity');
+      if (elLiq) {
+        const l = ind.banking_system_liquidity_cr || 52000;
+        elLiq.textContent = `${l >= 0 ? '+₹' : '-₹'}${Math.abs(l).toLocaleString('en-IN')} Cr`;
+      }
+
+      const elPmi = document.getElementById('analysisIfciPmi');
+      if (elPmi) elPmi.textContent = `${(ind.manufacturing_pmi || 58.8).toFixed(1)}`;
+
+      const elCpi = document.getElementById('analysisIfciCpi');
+      if (elCpi) elCpi.textContent = `${(ind.cpi_inflation || 4.40).toFixed(2)}%`;
+
+      const elGst = document.getElementById('analysisIfciGst');
+      if (elGst) elGst.textContent = `₹${((ind.gst_collection_cr || 189500) / 100000).toFixed(2)}L Cr`;
+
+      const elPe = document.getElementById('analysisIfciPe');
+      if (elPe) elPe.textContent = `${(ind.nifty_pe || 22.1).toFixed(1)}x`;
+
+      const elVix = document.getElementById('analysisIfciVix');
+      if (elVix) elVix.textContent = `${(ind.india_vix || 13.25).toFixed(2)} | ${(ind.advance_decline_ratio || 1.72).toFixed(2)}`;
+
+      const elReas = document.getElementById('analysisIfciReasons');
+      if (elReas) elReas.textContent = `Macro Drivers: ${(ifci.reasons && ifci.reasons.length > 0) ? ifci.reasons.join(' · ') : 'Surplus banking liquidity and solid corporate fundamentals underpin market valuation.'}`;
+    }
+
+    function renderAnalysisHeatmap(data, sectorFilter) {
+      // Render Sector summary cards
+      const secCards = document.getElementById('analysisSectorCards');
+      if (secCards && data.sectors) {
+        secCards.innerHTML = data.sectors.map(sec => {
+          const isPos = sec.avg_change >= 0;
+          return `<div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px 14px; cursor:pointer;" onclick="filterHeatmap('${sec.sector}')">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:700; font-size:12px; color:#FFF;">${sec.sector} (${sec.count})</span>
+              <span style="font-weight:700; font-family:var(--font-mono); font-size:12px; color:${isPos ? 'var(--accent-green)' : 'var(--accent-red)'};">${isPos ? '+' : ''}${sec.avg_change.toFixed(2)}%</span>
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); margin-top:3px; display:flex; justify-content:space-between;">
+              <span>🟢 ${sec.bullish_count} Bull</span>
+              <span>🔴 ${sec.bearish_count} Bear</span>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // Filter stocks
+      const hmGrid = document.getElementById('analysisHeatmapGrid');
+      if (!hmGrid || !data.heatmap) return;
+
+      const filtered = (sectorFilter === 'ALL')
+        ? data.heatmap
+        : data.heatmap.filter(h => h.sector.toLowerCase() === sectorFilter.toLowerCase());
+
+      hmGrid.innerHTML = filtered.map(item => {
+        const pct = item.pct_change !== undefined ? item.pct_change : (item.change_pct || 0.0);
+        const isPos = pct >= 0;
+        const isTop = item.is_top_pick;
+        const isBull = item.smc_bias === 'BULLISH';
+        const isBear = item.smc_bias === 'BEARISH';
+        const isSelected = (item.symbol === currentAnalysisSymbol);
+
+        // Color styling according to % move intensity
+        let tileBg = 'rgba(255,255,255,0.04)';
+        let tileBorder = 'var(--border-subtle)';
+        if (pct >= 1.5) {
+          tileBg = 'rgba(16, 185, 129, 0.22)';
+          tileBorder = 'rgba(16, 185, 129, 0.6)';
+        } else if (pct > 0) {
+          tileBg = 'rgba(16, 185, 129, 0.10)';
+          tileBorder = 'rgba(16, 185, 129, 0.3)';
+        } else if (pct <= -1.5) {
+          tileBg = 'rgba(239, 68, 68, 0.22)';
+          tileBorder = 'rgba(239, 68, 68, 0.6)';
+        } else if (pct < 0) {
+          tileBg = 'rgba(239, 68, 68, 0.10)';
+          tileBorder = 'rgba(239, 68, 68, 0.3)';
+        }
+
+        if (isSelected) {
+          tileBorder = 'var(--accent-cyan)';
+          tileBg = 'rgba(0, 240, 255, 0.18)';
+        }
+
+        const vol = item.volume_surge || item.volume_ratio || 1.0;
+
+        return `<div class="heatmap-tile" style="background:${tileBg}; border-color:${tileBorder}; position:relative;" onclick="inspectStockFromHeatmap('${item.symbol}')">
+          ${isTop ? '<span style="position:absolute; top:6px; right:6px; font-size:11px; color:#F59E0B;" title="Top Alpha Pick">★</span>' : ''}
+          <div style="font-weight:800; font-size:13px; color:${isSelected ? 'var(--accent-cyan)' : '#FFF'}; margin-bottom:2px;">
+            ${item.symbol}
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">${item.sector}</div>
+          <div style="font-family:var(--font-mono); font-weight:700; font-size:12px; color:#FFF;">
+            ₹${item.price.toLocaleString('en-IN', {minimumFractionDigits: 1, maximumFractionDigits: 1})}
+          </div>
+          <div style="font-family:var(--font-mono); font-weight:700; font-size:12px; color:${isPos ? 'var(--accent-green)' : 'var(--accent-red)'}; margin:2px 0;">
+            ${isPos ? '+' : ''}${pct.toFixed(2)}%
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:10px;">
+            <span style="color:var(--text-dim);">${vol.toFixed(1)}x Vol</span>
+            <span class="badge-pill ${isBull ? 'pill-green' : (isBear ? 'pill-red' : 'pill-gray')}" style="padding:1px 5px; font-size:9px;">${item.smc_bias}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderAnalysisLiquidity(data) {
+      const liq = data.liquidity || {};
+      const bsl = liq.nifty_bsl || 25350.0;
+      const ssl = liq.nifty_ssl || 24820.0;
+      const cvd = liq.universe_net_cvd || 14250000;
+      const bslCount = liq.bsl_swept_stocks_count !== undefined ? liq.bsl_swept_stocks_count : 7;
+      const sslCount = liq.ssl_swept_stocks_count !== undefined ? liq.ssl_swept_stocks_count : 38;
+
+      const elBsl = document.getElementById('analysisBslPrice');
+      if (elBsl) elBsl.textContent = `₹${bsl.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const elBslCount = document.getElementById('analysisBslSweptCount');
+      if (elBslCount) elBslCount.textContent = `BSL Swept Stocks: ${bslCount} / 50`;
+
+      const elSsl = document.getElementById('analysisSslPrice');
+      if (elSsl) elSsl.textContent = `₹${ssl.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
+      const elSslCount = document.getElementById('analysisSslSweptCount');
+      if (elSslCount) elSslCount.textContent = `SSL Swept Stocks: ${sslCount} / 50 (Accumulation)`;
+
+      const elCvd = document.getElementById('analysisUniverseCvd');
+      if (elCvd) {
+        elCvd.textContent = `${cvd >= 0 ? '+' : ''}${cvd.toLocaleString('en-IN')} Shs`;
+        elCvd.style.color = cvd >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+      }
+
+      const elFlow = document.getElementById('analysisFiiDiiCash');
+      if (elFlow) {
+        const blocks = liq.institutional_blocks_today || {};
+        const buys = blocks.block_buys_cr || 1024;
+        const sells = blocks.block_sells_cr || 770;
+        elFlow.textContent = `+₹${(buys + sells).toFixed(0)} Cr Net`;
+      }
+    }
+
+    function renderAnalysisFlowchart(data) {
+      const fcContainer = document.getElementById('analysisFlowchartContainer');
+      if (!fcContainer || !data.flowchart) return;
+
+      fcContainer.innerHTML = data.flowchart.map((st, idx) => {
+        const isLast = (idx === data.flowchart.length - 1);
+        const isPassed = (st.status === 'PASSED' || st.status === 'EXECUTED' || st.status === 'CONFIRMED');
+        return `<div class="flowchart-step-card">
+          <div class="flow-step-num">STAGE ${st.step} OF 8</div>
+          <div style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+            <span style="font-size:18px;">${st.icon || '⚡'}</span>
+            <span style="font-weight:700; font-size:12px; color:#FFF; line-height:1.3;">${st.name}</span>
+          </div>
+          <div style="font-size:11px; font-family:var(--font-mono); color:var(--accent-cyan); margin-bottom:4px;">${st.value}</div>
+          <div style="font-size:10px; color:var(--text-dim); margin-bottom:8px; line-height:1.2;">Rule: ${st.rule}</div>
+          <div>
+            <span class="badge-pill ${isPassed ? 'pill-green' : 'pill-red'}" style="font-size:10px; font-weight:700;">${st.status}</span>
+          </div>
+        </div>
+        ${!isLast ? '<div class="flow-arrow">➔</div>' : ''}`;
+      }).join('');
+    }
+
+    function renderAnalysisLimitOrders(data) {
+      const tbody = document.getElementById('analysisLimitOrdersBody');
+      if (!tbody || !data.limit_orders) return;
+
+      tbody.innerHTML = data.limit_orders.map(o => {
+        const isTop = (o.rank === 1);
+        const isShort = o.side.includes('SHORT');
+        const sidePill = isShort ? 'pill-red' : 'pill-green';
+        const statusPill = o.status === 'ACTIVE_IN_BROKER' ? 'pill-green' : (o.status === 'QUALIFIED_LIMIT_ORDER' ? 'pill-yellow' : 'pill-gray');
+
+        return `<tr style="${isTop ? 'background:rgba(245,158,11,0.08); border-left:4px solid #F59E0B;' : ''}">
+          <td style="font-weight:800; font-family:var(--font-mono); color:${isTop ? '#F59E0B' : 'var(--text-main)'};">
+            ${isTop ? '★ #1' : '#' + o.rank}
+          </td>
+          <td>
+            <strong style="color:${isTop ? '#F59E0B' : 'var(--text-main)'}; cursor:pointer;" onclick="inspectStockFromHeatmap('${o.symbol}')">${o.symbol}</strong>
+            <div style="font-size:10px; color:var(--text-dim);">${o.sector}</div>
+          </td>
+          <td><span class="badge-pill ${sidePill}" style="font-weight:700;">${o.side}</span></td>
+          <td style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan);">₹${o.entry_limit_price.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+          <td style="font-family:var(--font-mono); color:var(--accent-red);">₹${o.stop_loss_limit_price.toLocaleString('en-IN', {minimumFractionDigits:2})} <span style="font-size:10px; color:var(--text-dim);">(-5%)</span></td>
+          <td style="font-family:var(--font-mono); font-weight:700; color:var(--accent-green);">₹${o.target_limit_price.toLocaleString('en-IN', {minimumFractionDigits:2})} <span style="font-size:10px; color:var(--text-dim);">(+18%)</span></td>
+          <td style="font-family:var(--font-mono); color:var(--accent-yellow);" title="${o.trailing_stop_rule}">
+            ₹${o.trailing_stop_trigger_price.toLocaleString('en-IN', {minimumFractionDigits:2})}
+            <div style="font-size:9px; color:var(--text-dim);">+8% Trigger</div>
+          </td>
+          <td style="font-family:var(--font-mono); font-size:11px;">₹${o.allocated_position_value.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+          <td style="font-family:var(--font-mono); font-size:11px; color:var(--accent-cyan);">₹${o.blocked_mis_margin.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+          <td style="font-family:var(--font-mono); font-weight:700;">${o.quantity}</td>
+          <td style="font-family:var(--font-mono); color:var(--accent-green); font-weight:700;">${o.risk_reward_ratio}</td>
+          <td style="font-family:var(--font-mono); color:var(--accent-green); font-weight:700;">+₹${o.expected_gain_inr.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+          <td style="font-family:var(--font-mono); color:var(--accent-red); font-size:11px;">-₹${o.max_risk_inr.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+          <td><span class="badge-pill ${statusPill}" style="font-size:10px;">${o.status.replace(/_/g, ' ')}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
     // Initial check on load
     window.addEventListener('DOMContentLoaded', () => {
       loadSavedCredentials();
       updateDashboard();
       fetchFullAnalysis();
+      refreshAnalysisData();
       const sel = document.getElementById('symbolSelect');
       if (sel) {
         sel.addEventListener('change', (e) => {
@@ -2709,6 +3539,11 @@
       }
       setInterval(updateDashboard, 1000);   // Update dashboard & real-time prices every 1 second
       setInterval(fetchFullAnalysis, 60000); // Refresh full analysis every 60s
+      setInterval(() => {
+        if (currentMainView === 'analysis') {
+          refreshAnalysisData();
+        }
+      }, 3000); // Refresh deep institutional analysis every 3s when analysis view is active
     });
   </script>
 </body>
