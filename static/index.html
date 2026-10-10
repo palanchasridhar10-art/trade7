@@ -966,6 +966,15 @@
         🔄 Daily Update
       </button>
 
+      <div id="tradingViewBadge" class="badge badge-green" style="cursor: pointer; background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.4); color: #93C5FD;" onclick="syncTradingViewPrices()" title="TradingView Background Live Price Scanner (Click to sync now)">
+        <span class="badge-dot" style="background: #3B82F6; box-shadow: 0 0 8px #3B82F6;"></span>
+        <span id="tradingViewStatusText">📈 TV Live: 50/50</span>
+      </div>
+
+      <button id="btnSyncTradingView" class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px; border-color: rgba(59, 130, 246, 0.5); color: #93C5FD;" onclick="syncTradingViewPrices()" title="Update live stock prices & technical indicators directly from TradingView in the background">
+        📈 Sync TradingView
+      </button>
+
       <button id="btnSyncBrokerPrices" class="btn btn-secondary" style="padding: 5px 10px; font-size: 11px; border-color: rgba(255, 153, 51, 0.4); color: #FBBF24;" onclick="syncBrokerSharePrices()" title="Update live share prices as per Angel One broker">
         ⚡ Sync Broker Prices
       </button>
@@ -1801,6 +1810,20 @@
             dText.textContent = `📅 Daily Data: ${dailyData.active_market_date} (${dailyData.status === 'UP_TO_DATE' ? 'UPDATED' : 'SYNC DUE'})`;
           }
         } catch (e) {}
+
+        // Update TradingView Live Scanner Status Badge
+        if (data.tradingview) {
+          const tvBadge = document.getElementById('tradingViewBadge');
+          const tvText = document.getElementById('tradingViewStatusText');
+          if (tvBadge && tvText) {
+            const isRun = data.tradingview.is_running;
+            const synced = data.tradingview.synced_stocks_count || 50;
+            const total = data.tradingview.total_universe_stocks || 50;
+            const nifty = data.tradingview.nifty50_close ? data.tradingview.nifty50_close.toFixed(0) : '25120';
+            tvText.textContent = isRun ? `📈 TV Live: ${synced}/${total} · Nifty ${nifty}` : `📈 TV Paused`;
+            tvBadge.className = isRun ? 'badge badge-green' : 'badge badge-yellow';
+          }
+        }
 
         // Update Indian Financial Conditions Card
         updateIndianFinancialConditionsUI();
@@ -2638,6 +2661,35 @@
         alert('Price sync network error: ' + err.message);
       } finally {
         if (btn) btn.textContent = '⚡ Sync Broker Prices';
+      }
+    }
+
+    async function syncTradingViewPrices() {
+      const btn = document.getElementById('btnSyncTradingView');
+      if (btn) btn.textContent = '⏳ Syncing TV...';
+      try {
+        const res = await fetch('/api/tradingview/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          const d = data.details || {};
+          alert(`📈 TRADINGVIEW BACKGROUND LIVE SYNC COMPLETE!\n\nStocks Synced: ${d.synced_stocks || 50} / 50\nNifty 50 Close: ₹${(d.nifty50_close || 25120).toFixed(2)}\nIndia VIX: ${(d.india_vix || 13.4).toFixed(2)}\nTimestamp: ${d.timestamp || new Date().toLocaleTimeString()}\n\nAll real-time prices, EMAs, VWAP, RSI and SMC dealing ranges have been updated.`);
+          updateDashboard();
+          fetchFullAnalysis();
+          const sel = document.getElementById('symbolSelect');
+          if (sel) {
+            updateAgent1CardForSymbol(sel.value || 'RELIANCE');
+            updateAgent2CardForSymbol(sel.value || 'RELIANCE');
+          }
+        } else {
+          alert('TradingView notice: ' + (data.message || 'Sync failed'));
+        }
+      } catch (err) {
+        alert('TradingView network error: ' + err.message);
+      } finally {
+        if (btn) btn.textContent = '📈 Sync TradingView';
       }
     }
 

@@ -37,6 +37,7 @@ from src.data.universe import NIFTY50_UNIVERSE, ORDER_FLOW_PROFILES, TECHNICAL_P
 from src.data.smc import compute_smc_metrics, SMCData
 from src.data.pre_market import compute_pre_market_metrics, PreMarketData
 from src.data.daily_updater import DailyDataManager
+from src.data.tradingview_service import TradingViewBackgroundService
 
 # Global state
 journal = TradeJournal(db_path="trade_journal.db")
@@ -73,6 +74,13 @@ daily_manager = DailyDataManager(
     agent3=agent3,
     risk_engine=risk_engine,
     broker=active_broker
+)
+
+# Real-time Background TradingView Scanner Service (Zero API Keys required)
+tv_service = TradingViewBackgroundService(
+    daily_manager=daily_manager,
+    broker=active_broker,
+    sync_interval=int(os.getenv("TRADINGVIEW_SYNC_INTERVAL", 30))
 )
 
 def init_orchestrator(broker_instance):
@@ -497,11 +505,17 @@ def populate_initial_analysis():
     (Fundamental + Indian Financial Conditions) and Agent 2 (Technical + SMC + Pre-Market),
     ranks by expected profit, and automatically executes the single #1 best trade in the active broker portfolio.
     """
-    global analysis_summary, top_alpha_pick, orchestrator, active_broker
+    global analysis_summary, top_alpha_pick, orchestrator, active_broker, tv_service
 
     now_ist = NSECalendar.get_ist_now()
     print(f"[SYSTEM-INIT] Synchronizing 50 Nifty stocks and agents for trading date: {now_ist.date()}...")
     daily_manager.perform_daily_rollover(target_date=now_ist.date(), force=True)
+
+    # Start Real-Time Background TradingView Scanner Service
+    try:
+        tv_service.start()
+    except Exception as e:
+        logger.warning(f"[SYSTEM-INIT] Could not start TradingView background service: {e}")
 
     if not orchestrator or not active_broker:
         if not active_broker:
@@ -600,7 +614,18 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 "single_trade_policy": True,
                 "top_alpha_pick": top_alpha_pick,
                 "max_open_positions": risk_engine.max_open_positions,
-                "analysis_summary": analysis_summary
+                "analysis_summary": analysis_summary,
+                "tradingview": tv_service.get_status()
+            })
+
+        elif self.path == "/api/tradingview/status":
+            self._send_json(200, tv_service.get_status())
+
+        elif self.path == "/api/tradingview/prices" or self.path == "/api/tradingview/scan":
+            self._send_json(200, {
+                "status": "ok",
+                "count": len(tv_service.latest_market_cache),
+                "data": tv_service.latest_market_cache
             })
 
         elif self.path.startswith("/api/fundamentals"):
@@ -795,6 +820,7 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 if success:
                     active_broker = adapter
                     daily_manager.broker = adapter
+                    tv_service.broker = adapter
                     active_client_code = client_code
                     active_mode = "live"
                     is_broker_connected = True
@@ -828,6 +854,7 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
                 paper_code = payload.get("client_code", "").strip() or "PAPER_DEMO"
                 active_broker = PaperBroker(initial_capital=1_000_000.0, slippage_pct=0.08)
                 daily_manager.broker = active_broker
+                tv_service.broker = active_broker
                 active_client_code = paper_code
                 active_mode = "paper"
                 is_broker_connected = True
@@ -850,6 +877,8 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
             if active_broker:
                 active_broker.disconnect()
             active_broker = None
+            daily_manager.broker = None
+            tv_service.broker = None
             active_client_code = None
             active_mode = None
             is_broker_connected = False
@@ -1031,6 +1060,34 @@ class TradingSystemWebServer(BaseHTTPRequestHandler):
             force = payload.get("force", False)
             res = execute_single_best_trade(orchestrator, scan_count=1, force=force)
             self._send_json(200, res)
+
+        elif self.path == "/api/tradingview/sync":
+            try:
+                sync_res = tv_service.sync_system_prices(daily_manager=daily_manager, broker=active_broker)
+                self._send_json(200, {
+                    "status": "success",
+                    "message": f"TradingView sync completed: {sync_res.get('synced_stocks', 0)}/50 stocks + Nifty ({sync_res.get('nifty50_close', 0):.2f}) updated in background!",
+                    "details": sync_res,
+                    "tradingview": tv_service.get_status()
+                })
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": f"TradingView sync error: {e}"})
+
+        elif self.path == "/api/tradingview/toggle":
+            action = payload.get("action", "start")
+            interval = payload.get("interval", tv_service.sync_interval)
+            if action == "stop":
+                tv_service.stop()
+                msg = "TradingView background price synchronization STOPPED."
+            else:
+                tv_service.start(interval_seconds=int(interval) if interval else None)
+                msg = f"TradingView background price synchronization STARTED (Scanning every {tv_service.sync_interval}s)."
+
+            self._send_json(200, {
+                "status": "success",
+                "message": msg,
+                "tradingview": tv_service.get_status()
+            })
 
         else:
             self._send_json(404, {"error": "Not Found"})
