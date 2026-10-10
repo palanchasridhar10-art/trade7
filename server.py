@@ -76,11 +76,11 @@ daily_manager = DailyDataManager(
     broker=active_broker
 )
 
-# Real-time Background TradingView Scanner Service (Zero API Keys required)
+# Real-time Background TradingView Scanner Service (Zero API Keys required, 1s interval)
 tv_service = TradingViewBackgroundService(
     daily_manager=daily_manager,
     broker=active_broker,
-    sync_interval=int(os.getenv("TRADINGVIEW_SYNC_INTERVAL", 30))
+    sync_interval=int(os.getenv("TRADINGVIEW_SYNC_INTERVAL", 1))
 )
 
 def init_orchestrator(broker_instance):

@@ -191,7 +191,7 @@ def test_background_worker_lifecycle(service_setup):
     mock_resp.__enter__.return_value = mock_resp
 
     with patch("urllib.request.urlopen", return_value=mock_resp):
-        tv.start(interval_seconds=5)
+        tv.start(interval_seconds=1)
         assert tv.is_running
         assert tv._thread is not None
         assert tv._thread.is_alive()
@@ -199,10 +199,37 @@ def test_background_worker_lifecycle(service_setup):
         # Check status
         status = tv.get_status()
         assert status["is_running"] is True
-        assert status["sync_interval_seconds"] == 5
+        assert status["sync_interval_seconds"] == 1
         assert status["source"] == "TRADINGVIEW_SCANNER_INDIA"
 
         # Stop
         tv.stop()
         assert tv.is_running is False
         assert not tv._thread.is_alive()
+
+
+def test_tradingview_service_1_second_interval(service_setup):
+    """Verify that TradingViewBackgroundService allows and enforces 1-second interval."""
+    tv = TradingViewBackgroundService(sync_interval=1)
+    assert tv.sync_interval == 1
+
+    sample_response = {
+        "totalCount": 1,
+        "data": [
+            {
+                "s": "NSE:RELIANCE",
+                "d": [3080.0, 3050.0, 3100.0, 3040.0, 2000000, 1.0, 0.3, 60.0, 3050.0, 3000.0, 2900.0, 3060.0]
+            }
+        ]
+    }
+
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(sample_response).encode("utf-8")
+    mock_resp.__enter__.return_value = mock_resp
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        tv.start(interval_seconds=1)
+        time.sleep(1.2)
+        assert tv.total_sync_cycles >= 1
+        assert tv.get_status()["sync_interval_seconds"] == 1
+        tv.stop()

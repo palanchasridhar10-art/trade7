@@ -72,10 +72,10 @@ class TradingViewBackgroundService:
         "VWAP"
     ]
 
-    def __init__(self, daily_manager=None, broker=None, sync_interval: int = 30):
+    def __init__(self, daily_manager=None, broker=None, sync_interval: int = 1):
         self.daily_manager = daily_manager
         self.broker = broker
-        self.sync_interval = max(5, sync_interval)
+        self.sync_interval = max(1, sync_interval)
 
         # State
         self.is_running: bool = False
@@ -102,7 +102,7 @@ class TradingViewBackgroundService:
         except Exception:
             self._ssl_ctx = ssl._create_unverified_context() if hasattr(ssl, "_create_unverified_context") else None
 
-    def fetch_live_data(self, timeout: int = 10, max_retries: int = 3) -> Dict[str, Dict[str, Any]]:
+    def fetch_live_data(self, timeout: float = 3.0, max_retries: int = 2) -> Dict[str, Dict[str, Any]]:
         """Fetch live OHLCV and indicator metrics from TradingView scanner endpoint with retries."""
         payload = {
             "symbols": {"tickers": self.tickers},
@@ -321,26 +321,33 @@ class TradingViewBackgroundService:
         }
 
     def _worker_loop(self):
-        """Background daemon thread worker continuously syncing TradingView prices."""
+        """Background daemon thread worker continuously syncing TradingView prices every 1 second."""
         logger.info(f"[TradingView] Background price synchronizer worker STARTED (interval: {self.sync_interval}s).")
         while not self._stop_event.is_set():
+            start_t = time.time()
             try:
                 self.sync_system_prices()
             except Exception as e:
                 logger.error(f"[TradingView Worker] Error in sync cycle: {e}")
 
-            # Sleep in small slices to respond promptly to stop signal
-            for _ in range(self.sync_interval * 2):
+            # Sleep remainder of sync_interval in small slices (100ms) to stay responsive to stop
+            elapsed = time.time() - start_t
+            sleep_time = max(0.0, float(self.sync_interval) - elapsed)
+            slices = int(sleep_time / 0.1)
+            for _ in range(slices):
                 if self._stop_event.is_set():
                     break
-                time.sleep(0.5)
+                time.sleep(0.1)
+            rem = sleep_time - (slices * 0.1)
+            if rem > 0 and not self._stop_event.is_set():
+                time.sleep(rem)
 
         logger.info("[TradingView] Background price synchronizer worker STOPPED.")
 
     def start(self, interval_seconds: Optional[int] = None):
         """Start the background TradingView synchronization thread."""
-        if interval_seconds:
-            self.sync_interval = max(5, interval_seconds)
+        if interval_seconds is not None:
+            self.sync_interval = max(1, interval_seconds)
 
         if self.is_running and self._thread and self._thread.is_alive():
             logger.info("[TradingView] Service is already running.")

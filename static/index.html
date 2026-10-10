@@ -2707,8 +2707,8 @@
         updateAgent1CardForSymbol(sel.value || 'RELIANCE');
         updateAgent2CardForSymbol(sel.value || 'RELIANCE');
       }
-      setInterval(updateDashboard, 5000);
-      setInterval(fetchFullAnalysis, 60000);  // Refresh full analysis every 60s
+      setInterval(updateDashboard, 1000);   // Update dashboard & real-time prices every 1 second
+      setInterval(fetchFullAnalysis, 60000); // Refresh full analysis every 60s
     });
   </script>
 </body>
