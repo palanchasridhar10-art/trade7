@@ -53,48 +53,80 @@ class TradingOrchestrator:
         orderflow: Dict[str, Any],
         smc: Optional[Dict[str, Any]] = None,
         pre_market: Optional[Dict[str, Any]] = None,
+        direction: Any = SignalDirection.LONG,
         target_pct: float = 18.0,
         stop_pct: float = 5.0
     ) -> Dict[str, float]:
-        """Calculates expected profit and alpha potential score for universe ranking."""
+        """Calculates expected profit and alpha potential score for universe ranking supporting both LONG & SHORT."""
         ev_pct = (win_prob * target_pct) - ((1.0 - win_prob) * stop_pct)
-        fund_factor = max(0.5, 0.7 + (fund_score / 100.0) * 0.6)  # Score 86 -> 1.216x
-        adx_factor = max(1.0, min(50.0, adx) / 25.0)             # ADX 32 -> 1.28x
-        vol_factor = max(1.0, min(2.5, volume_ratio))            # Vol 1.6x -> 1.6x
+        is_short = (direction == SignalDirection.SHORT or str(direction).upper() in ("SHORT", "SELL"))
 
+        # Fundamental conviction factor:
+        # For LONG: higher fund_score (>50) is better
+        # For SHORT: lower fund_score (<50) indicates stronger fundamental breakdown / distribution
+        effective_fund_strength = (100.0 - fund_score) if is_short else fund_score
+        fund_factor = max(0.5, 0.7 + (effective_fund_strength / 100.0) * 0.6)
+        adx_factor = max(1.0, min(50.0, adx) / 25.0)
+        vol_factor = max(1.0, min(2.5, volume_ratio))
+
+        # Order Flow alignment:
         cvd = orderflow.get("cumulative_volume_delta", orderflow.get("cumulative_delta", 0))
         bid_depth = orderflow.get("bid_depth_qty", 100000)
         ask_depth = max(1, orderflow.get("ask_depth_qty", 100000))
         imbalance = (bid_depth - ask_depth) / (bid_depth + ask_depth) if (bid_depth + ask_depth) > 0 else 0.0
-        of_factor = 1.0 + (0.20 if cvd > 0 else -0.10) + max(-0.15, min(0.20, imbalance * 0.5))
 
+        if is_short:
+            # Negative CVD (selling tape) and Ask Depth > Bid Depth confirms SHORT
+            of_factor = 1.0 + (0.20 if cvd < 0 else -0.10) + max(-0.15, min(0.20, -imbalance * 0.5))
+        else:
+            of_factor = 1.0 + (0.20 if cvd > 0 else -0.10) + max(-0.15, min(0.20, imbalance * 0.5))
+
+        # Smart Money Concepts alignment:
         smc_factor = 1.0
         if smc:
             smc_bias = smc.get("bias", smc.get("smc_bias", "NEUTRAL"))
             smc_liq = str(smc.get("liquidity_event", smc.get("smc_liquidity_event", "NEUTRAL")))
-            if smc_bias == "BULLISH":
-                smc_factor += 0.15
-            elif smc_bias == "BEARISH":
-                smc_factor -= 0.15
-            if "SWEPT" in smc_liq:
-                smc_factor += 0.10
+            if is_short:
+                if smc_bias == "BEARISH":
+                    smc_factor += 0.15
+                elif smc_bias == "BULLISH":
+                    smc_factor -= 0.15
+                if "BSL_SWEPT" in smc_liq or "SWEPT" in smc_liq:
+                    smc_factor += 0.10
+            else:
+                if smc_bias == "BULLISH":
+                    smc_factor += 0.15
+                elif smc_bias == "BEARISH":
+                    smc_factor -= 0.15
+                if "SSL_SWEPT" in smc_liq or "SWEPT" in smc_liq:
+                    smc_factor += 0.10
 
+        # Pre-market session alignment:
         pm_factor = 1.0
         if pre_market:
             pm_vote = pre_market.get("pre_market_vote", pre_market.get("vote", 0.0))
             pm_regime = pre_market.get("pre_market_regime", pre_market.get("regime", "BALANCED_OPEN"))
-            if pm_regime == "BULLISH_RUNAWAY" or pm_vote > 0.5:
-                pm_factor += 0.15
-            elif pm_regime == "BEARISH_BREAKDOWN" or pm_vote < -0.5:
-                pm_factor -= 0.15
-            elif pm_regime == "GAP_DOWN_ACCUMULATION":
-                pm_factor += 0.08
+            if is_short:
+                if pm_regime == "BEARISH_BREAKDOWN" or pm_vote < -0.5:
+                    pm_factor += 0.15
+                elif pm_regime == "BULLISH_RUNAWAY" or pm_vote > 0.5:
+                    pm_factor -= 0.15
+                elif pm_regime == "GAP_UP_PROFIT_TAKING":
+                    pm_factor += 0.10
+            else:
+                if pm_regime == "BULLISH_RUNAWAY" or pm_vote > 0.5:
+                    pm_factor += 0.15
+                elif pm_regime == "BEARISH_BREAKDOWN" or pm_vote < -0.5:
+                    pm_factor -= 0.15
+                elif pm_regime == "GAP_DOWN_ACCUMULATION":
+                    pm_factor += 0.08
 
         alpha_score = ev_pct * fund_factor * adx_factor * vol_factor * of_factor * smc_factor * pm_factor
         return {
             "expected_profit_pct": round(ev_pct, 2),
             "leveraged_expected_profit_pct": round(ev_pct * 5.0, 2),  # 5x broker margin leverage
             "day_profit_potential_score": round(alpha_score, 2),
+            "direction": "SHORT" if is_short else "LONG",
             "fund_factor": round(fund_factor, 3),
             "momentum_factor": round(adx_factor * vol_factor, 3),
             "orderflow_factor": round(of_factor, 3),
@@ -184,7 +216,8 @@ class TradingOrchestrator:
             volume_ratio=technical_inputs.get("volume_ratio", 1.0),
             orderflow=technical_inputs.get("orderflow") or {},
             smc=tech_signal.features,
-            pre_market=tech_signal.features
+            pre_market=tech_signal.features,
+            direction=tech_signal.direction
         )
 
         # Step 5: Execution Decision

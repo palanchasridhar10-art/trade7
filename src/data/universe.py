@@ -194,17 +194,18 @@ TECHNICAL_PROFILES: Dict[str, Dict[str, Any]] = {
     "SIEMENS":    {"adx": 30.0, "rsi14": 60.0, "macd_hist":  2.8, "volume_ratio": 1.40, "vwap_ratio": 1.005, "ema20_r": 0.991, "ema50_r": 0.973, "ema200_r": 0.924},
     "APOLLOHOSP": {"adx": 30.0, "rsi14": 60.0, "macd_hist":  2.8, "volume_ratio": 1.40, "vwap_ratio": 1.005, "ema20_r": 0.991, "ema50_r": 0.973, "ema200_r": 0.923},
     "DABUR":      {"adx": 28.0, "rsi14": 55.0, "macd_hist":  1.8, "volume_ratio": 1.28, "vwap_ratio": 1.003, "ema20_r": 0.993, "ema50_r": 0.976, "ema200_r": 0.929},
-    # Neutral/weak setups — will be filtered out by gate
-    "TCS":        {"adx": 19.0, "rsi14": 52.0, "macd_hist":  0.5, "volume_ratio": 0.90, "vwap_ratio": 1.000, "ema20_r": 0.999, "ema50_r": 0.985, "ema200_r": 0.940},
+    # Strong SHORT setups (ADX >= 32, RSI 28-38, below VWAP, heavy distribution volume)
+    "TCS":        {"adx": 34.0, "rsi14": 34.0, "macd_hist": -3.2, "volume_ratio": 1.65, "vwap_ratio": 0.992, "ema20_r": 1.012, "ema50_r": 1.025, "ema200_r": 1.060},
+    "BAJFINANCE": {"adx": 35.0, "rsi14": 32.0, "macd_hist": -3.8, "volume_ratio": 1.70, "vwap_ratio": 0.991, "ema20_r": 1.014, "ema50_r": 1.028, "ema200_r": 1.065},
+    "HINDUNILVR": {"adx": 33.0, "rsi14": 35.0, "macd_hist": -3.0, "volume_ratio": 1.55, "vwap_ratio": 0.993, "ema20_r": 1.010, "ema50_r": 1.022, "ema200_r": 1.055},
+    "ASIANPAINT": {"adx": 36.0, "rsi14": 30.0, "macd_hist": -4.2, "volume_ratio": 1.80, "vwap_ratio": 0.990, "ema20_r": 1.015, "ema50_r": 1.030, "ema200_r": 1.070},
+    "KOTAKBANK":  {"adx": 32.0, "rsi14": 36.0, "macd_hist": -2.8, "volume_ratio": 1.50, "vwap_ratio": 0.994, "ema20_r": 1.009, "ema50_r": 1.020, "ema200_r": 1.050},
+    "NESTLEIND":  {"adx": 33.0, "rsi14": 35.0, "macd_hist": -2.9, "volume_ratio": 1.48, "vwap_ratio": 0.993, "ema20_r": 1.010, "ema50_r": 1.022, "ema200_r": 1.052},
+    "DIVISLAB":   {"adx": 34.0, "rsi14": 33.0, "macd_hist": -3.4, "volume_ratio": 1.60, "vwap_ratio": 0.992, "ema20_r": 1.011, "ema50_r": 1.024, "ema200_r": 1.058},
+    # Neutral/ranging setups — will be filtered out by gate
     "INFY":       {"adx": 22.0, "rsi14": 50.0, "macd_hist":  0.2, "volume_ratio": 1.00, "vwap_ratio": 1.000, "ema20_r": 0.998, "ema50_r": 0.988, "ema200_r": 0.945},
-    "KOTAKBANK":  {"adx": 18.0, "rsi14": 42.0, "macd_hist": -1.5, "volume_ratio": 1.10, "vwap_ratio": 0.998, "ema20_r": 1.005, "ema50_r": 1.015, "ema200_r": 0.980},
-    "BAJFINANCE": {"adx": 20.0, "rsi14": 40.0, "macd_hist": -2.0, "volume_ratio": 1.15, "vwap_ratio": 0.997, "ema20_r": 1.008, "ema50_r": 1.018, "ema200_r": 0.985},
-    "HINDUNILVR": {"adx": 17.0, "rsi14": 38.0, "macd_hist": -2.5, "volume_ratio": 1.20, "vwap_ratio": 0.996, "ema20_r": 1.010, "ema50_r": 1.020, "ema200_r": 0.990},
-    "NESTLEIND":  {"adx": 16.0, "rsi14": 44.0, "macd_hist": -1.0, "volume_ratio": 0.95, "vwap_ratio": 0.999, "ema20_r": 1.002, "ema50_r": 1.010, "ema200_r": 0.970},
     "BRITANNIA":  {"adx": 22.0, "rsi14": 48.0, "macd_hist":  0.8, "volume_ratio": 1.05, "vwap_ratio": 1.001, "ema20_r": 0.997, "ema50_r": 0.990, "ema200_r": 0.955},
-    "ASIANPAINT": {"adx": 15.0, "rsi14": 36.0, "macd_hist": -3.0, "volume_ratio": 1.25, "vwap_ratio": 0.995, "ema20_r": 1.012, "ema50_r": 1.022, "ema200_r": 0.995},
     "ADANIENT":   {"adx": 20.0, "rsi14": 45.0, "macd_hist": -0.8, "volume_ratio": 1.10, "vwap_ratio": 0.998, "ema20_r": 1.004, "ema50_r": 1.012, "ema200_r": 0.975},
-    "DIVISLAB":   {"adx": 18.0, "rsi14": 40.0, "macd_hist": -1.8, "volume_ratio": 1.12, "vwap_ratio": 0.997, "ema20_r": 1.007, "ema50_r": 1.016, "ema200_r": 0.982},
     "VEDL":       {"adx": 21.0, "rsi14": 47.0, "macd_hist":  0.5, "volume_ratio": 1.08, "vwap_ratio": 1.000, "ema20_r": 0.999, "ema50_r": 0.988, "ema200_r": 0.950},
     "INDUSINDBK": {"adx": 25.0, "rsi14": 52.0, "macd_hist":  1.2, "volume_ratio": 1.20, "vwap_ratio": 1.002, "ema20_r": 0.994, "ema50_r": 0.980, "ema200_r": 0.940},
     "BAJAJFINSV": {"adx": 24.0, "rsi14": 52.0, "macd_hist":  1.0, "volume_ratio": 1.18, "vwap_ratio": 1.002, "ema20_r": 0.994, "ema50_r": 0.980, "ema200_r": 0.942},
@@ -379,14 +380,14 @@ def _build_pre_market_profiles() -> Dict[str, Dict[str, Any]]:
                 "iep_low": round(px * 0.997, 2),
                 "gift_nifty_change_pct": 0.42
             }
-        elif sym in ["TCS", "INFY", "WIPRO", "HCLTECH"]:
+        elif sym in ["TCS", "BAJFINANCE", "ASIANPAINT", "HINDUNILVR", "KOTAKBANK", "DIVISLAB", "NESTLEIND"]:
             # Bearish Pre-Market Profile (BEARISH_BREAKDOWN)
             gap_pct = -1.25
             prev_close = round(px / (1.0 + (gap_pct / 100.0)), 2)
             avg_vol = 24000
             iep_vol = int(avg_vol * 1.50)
-            buy_qty = 42000
-            sell_qty = 98000
+            buy_qty = 35000
+            sell_qty = 105000
             profiles[sym] = {
                 "symbol": sym,
                 "prev_close": prev_close,
@@ -397,7 +398,7 @@ def _build_pre_market_profiles() -> Dict[str, Dict[str, Any]]:
                 "total_sell_qty": sell_qty,
                 "iep_high": round(px * 1.002, 2),
                 "iep_low": round(px * 0.994, 2),
-                "gift_nifty_change_pct": 0.15
+                "gift_nifty_change_pct": -0.35
             }
         elif sym in ["SUNPHARMA", "CIPLA", "DRREDDY"]:
             # Gap Down Accumulation Profile (smart money absorbing dips)

@@ -356,7 +356,7 @@ class DailyDataManager:
                 "ema50_r": round(new_ema50 / new_price, 4),
                 "ema200_r": round(new_ema200 / new_price, 4),
                 "atr14": round(new_price * 0.012, 2),
-                "vwap": round(new_price * 0.995, 2),
+                "vwap": round(new_price * (0.995 if daily_pct >= 0 else 1.006), 2),
                 "last_updated": now.isoformat(),
                 "trading_date": self.active_market_date.isoformat()
             }
@@ -371,14 +371,14 @@ class DailyDataManager:
             current_pct = ((new_price - swing_low) / dealing_range * 100.0) if dealing_range > 0 else 50.0
 
             # Determine structure continuation or shift
-            if sym in ["RELIANCE", "TATAMOTORS", "COALINDIA", "TATASTEEL", "ONGC"]:
+            if sym in ["RELIANCE", "TATAMOTORS", "COALINDIA", "TATASTEEL", "ONGC"] or daily_pct > 0.4:
                 struct_type = MarketStructureType.BULLISH_BOS
                 liq_type = LiquidityEventType.SSL_SWEPT
                 smc_bias = "BULLISH"
                 ob_level = round(pdl * 1.002, 2)
                 fvg_low = round(pdl * 1.005, 2)
                 fvg_high = round(pdl * 1.012, 2)
-            elif sym in ["TCS", "INFY"]:
+            elif sym in ["TCS", "INFY", "KOTAKBANK", "BAJFINANCE", "ASIANPAINT", "HINDUNILVR"] or daily_pct < -0.4:
                 struct_type = MarketStructureType.BEARISH_BOS
                 liq_type = LiquidityEventType.BSL_SWEPT
                 smc_bias = "BEARISH"
@@ -386,9 +386,9 @@ class DailyDataManager:
                 fvg_low = round(pdh * 0.988, 2)
                 fvg_high = round(pdh * 0.995, 2)
             else:
-                struct_type = MarketStructureType.BULLISH_BOS if daily_pct > 0.4 else MarketStructureType.RANGING_CONSOLIDATION
-                liq_type = LiquidityEventType.SSL_SWEPT if daily_pct > 0.4 else LiquidityEventType.NEUTRAL
-                smc_bias = "BULLISH" if daily_pct > 0.4 else "NEUTRAL"
+                struct_type = MarketStructureType.RANGING_CONSOLIDATION
+                liq_type = LiquidityEventType.NEUTRAL
+                smc_bias = "NEUTRAL"
                 ob_level = round(day_low * 1.001, 2)
                 fvg_low = round(day_low * 1.003, 2)
                 fvg_high = round(day_low * 1.009, 2)
